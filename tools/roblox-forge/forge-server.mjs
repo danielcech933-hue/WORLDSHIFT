@@ -28,20 +28,8 @@ const state = {
 };
 
 const PROCESS_DEFINITIONS = {
-  rojo: {
-    label: 'Rojo',
-    command: 'rojo',
-    args: ['serve', 'default.project.json'],
-    cwd: ROOT,
-    persistent: true
-  },
-  codex: {
-    label: 'Codex CLI',
-    command: 'codex',
-    args: [],
-    cwd: ROOT,
-    persistent: true
-  }
+  rojo: { label: 'Rojo', command: 'rojo', args: ['serve', 'default.project.json'], cwd: ROOT, persistent: true },
+  codex: { label: 'Codex CLI', command: 'codex', args: [], cwd: ROOT, persistent: true }
 };
 
 const managedProcesses = new Map();
@@ -58,8 +46,7 @@ function appendProcessLog(id, chunk) {
   const current = processLogs.get(id) || '';
   const next = (current + String(chunk)).slice(-30000);
   processLogs.set(id, next);
-  const entry = ensureProcessState(id);
-  entry.log = next;
+  ensureProcessState(id).log = next;
 }
 
 function startManagedProcess(id) {
@@ -92,7 +79,7 @@ function startManagedProcess(id) {
     current.running = false;
     current.pid = null;
     current.exitCode = code;
-    appendProcessLog(id, `\n[FORGE] ${definition.label} exited (${signal || code ?? 'unknown'}).\n`);
+    appendProcessLog(id, `\n[FORGE] ${definition.label} exited (${signal ?? code ?? 'unknown'}).\n`);
   });
 
   appendProcessLog(id, `[FORGE] Starting ${definition.label}: ${definition.command} ${definition.args.join(' ')}\n`);
@@ -177,11 +164,7 @@ async function deleteGithubFile(filePath, sha, message) {
 }
 
 async function putGithubFile(filePath, content, message, sha = undefined) {
-  const body = {
-    message,
-    content: Buffer.from(content, 'utf8').toString('base64'),
-    branch: GITHUB_BRANCH
-  };
+  const body = { message, content: Buffer.from(content, 'utf8').toString('base64'), branch: GITHUB_BRANCH };
   if (sha) body.sha = sha;
   return github(filePath, {
     method: 'PUT',
@@ -211,17 +194,14 @@ function safeName(value) {
 }
 
 async function executeCommand(command) {
-  const id = command.id || crypto.randomUUID();
   const type = command.type;
   const args = command.args || {};
 
   switch (type) {
     case 'ping':
       return { ok: true, type, message: 'Forge bridge is alive.' };
-
     case 'studio_state':
       return { ok: true, type, studio: state.lastStudioState };
-
     case 'create_project_folder': {
       const name = safeName(args.name);
       if (!name) throw new Error('Missing args.name');
@@ -229,16 +209,12 @@ async function executeCommand(command) {
       await fs.mkdir(folder, { recursive: true });
       return { ok: true, type, path: folder };
     }
-
     case 'process_start':
       return { ok: true, type, process: startManagedProcess(safeName(args.id)) };
-
     case 'process_stop':
       return { ok: true, type, process: stopManagedProcess(safeName(args.id)) };
-
     case 'process_input':
       return { ok: true, type, process: sendProcessInput(safeName(args.id), args.input || '') };
-
     default:
       throw new Error(`Unsupported Forge command: ${type}`);
   }
@@ -251,26 +227,13 @@ async function pollGithub() {
     const file = await getGithubFile('.forge/inbox/next-command.json');
     const command = JSON.parse(Buffer.from(file.content, 'base64').toString('utf8'));
     if (command.id && state.lastCommand?.id === command.id) return;
-
     state.lastCommand = command;
     let result;
     try {
-      result = {
-        id: command.id || crypto.randomUUID(),
-        commandId: command.id || null,
-        completedAt: new Date().toISOString(),
-        ...(await executeCommand(command))
-      };
+      result = { id: command.id || crypto.randomUUID(), commandId: command.id || null, completedAt: new Date().toISOString(), ...(await executeCommand(command)) };
     } catch (error) {
-      result = {
-        id: command.id || crypto.randomUUID(),
-        commandId: command.id || null,
-        completedAt: new Date().toISOString(),
-        ok: false,
-        error: error.message
-      };
+      result = { id: command.id || crypto.randomUUID(), commandId: command.id || null, completedAt: new Date().toISOString(), ok: false, error: error.message };
     }
-
     await writeResult(result);
     await deleteGithubFile('.forge/inbox/next-command.json', file.sha, `forge: consume ${result.id}`);
   } catch (error) {
@@ -299,16 +262,11 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
   if (!authorized(req)) return send(res, 401, { ok: false, error: 'Unauthorized' });
-
   const url = new URL(req.url, `http://${req.headers.host}`);
 
   try {
     if (req.method === 'GET' && await serveStatic(url.pathname, res)) return;
-
-    if (req.method === 'GET' && url.pathname === '/api/health') {
-      return send(res, 200, { ok: true, ...state, processes: Object.values(state.processes) });
-    }
-
+    if (req.method === 'GET' && url.pathname === '/api/health') return send(res, 200, { ok: true, ...state, processes: Object.values(state.processes) });
     if (req.method === 'POST' && url.pathname === '/api/studio/state') {
       const payload = await readBody(req);
       state.lastStudioHeartbeat = new Date().toISOString();
@@ -316,13 +274,11 @@ const server = http.createServer(async (req, res) => {
       await fs.writeFile(STATE_FILE, JSON.stringify(payload, null, 2));
       return send(res, 200, { ok: true, receivedAt: state.lastStudioHeartbeat });
     }
-
     if (req.method === 'POST' && url.pathname === '/api/command') {
       const command = await readBody(req);
       const result = await executeCommand(command);
       return send(res, 200, { ok: true, result });
     }
-
     return send(res, 404, { ok: false, error: 'Not found' });
   } catch (error) {
     return send(res, 500, { ok: false, error: error.message });
