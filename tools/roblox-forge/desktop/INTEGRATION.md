@@ -1,0 +1,1 @@
+Forge desktop integration is intentionally supervised: selecting a role and prompt prepares an agent run; write-capable implementation requires an explicit approval action. Results and diagnostics remain visible to the operator.
