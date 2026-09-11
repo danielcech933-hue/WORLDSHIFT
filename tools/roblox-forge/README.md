@@ -56,7 +56,7 @@ The app can install `studio/ForgePlugin.server.lua` to:
 
 `%LOCALAPPDATA%\Roblox\Plugins\RobloxForge.lua`
 
-The plugin posts Studio state to Forge every two seconds. Roblox documents localhost communication from Studio plugins as a supported extension mechanism; the user must allow HTTP communication when prompted. urlRoblox HttpService documentationhttps://create.roblox.com/docs/cloud-services/http-service
+The plugin posts Studio state to Forge every two seconds. Roblox Studio plugins can communicate with local software through `localhost` / `127.0.0.1` when the required HTTP permission is granted.
 
 ## Agent layer
 
@@ -72,7 +72,7 @@ Never commit API tokens or credentials.
 
 ## MCP / ChatGPT
 
-MCP is the canonical integration boundary. Local agents can use stdio MCP directly. ChatGPT custom MCP apps require the supported developer-mode/app setup; ChatGPT does not directly connect to an arbitrary localhost MCP server, so a secure tunnel or supported remote deployment is required when connecting ChatGPT itself. urlOpenAI Apps SDK documentationhttps://help.openai.com/en/articles/12515353-build-with-the-apps-sdk
+MCP is the canonical integration boundary. Local agents can use stdio MCP directly. ChatGPT custom MCP apps require the supported developer-mode/app setup; ChatGPT does not directly connect to an arbitrary localhost MCP server, so a secure tunnel or supported remote deployment is required when connecting ChatGPT itself.
 
 ## Local bridge
 
