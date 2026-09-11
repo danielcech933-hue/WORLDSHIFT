@@ -2,7 +2,7 @@ const state = new Map();
 let selected = 'forge';
 let busy = false;
 
-const labels = { forge: 'Forge Bridge', rojo: 'Rojo', codex: 'Codex CLI' };
+const labels = { forge: 'Forge Bridge', rojo: 'Rojo', codex: 'Codex CLI', gemini: 'Gemini CLI · FREE AGENT' };
 const cards = document.getElementById('cards');
 const log = document.getElementById('log');
 const select = document.getElementById('logSelect');
@@ -26,7 +26,7 @@ function render(items) {
   items.forEach(item => state.set(item.id, item));
   cards.innerHTML = items.length ? items.map(item => `
     <article class="process panel ${item.running ? 'running' : ''}">
-      <div class="process-top"><div><div class="eyebrow">PROCESS</div><h3>${escapeHtml(item.label)}</h3></div><span class="dot"></span></div>
+      <div class="process-top"><div><div class="eyebrow">${item.id === 'gemini' ? 'AI AGENT' : 'PROCESS'}</div><h3>${escapeHtml(item.label)}</h3></div><span class="dot"></span></div>
       <div class="meta">${item.running ? `RUNNING · PID ${item.pid ?? '—'}` : 'STOPPED'}</div>
       <div class="buttons"><button data-start="${item.id}" ${item.running ? 'disabled' : ''}>START</button><button data-stop="${item.id}" ${item.running ? '' : 'disabled'}>STOP</button><button data-view="${item.id}">LOG</button></div>
     </article>`).join('') : '<div class="empty panel">Vyber projekt WORLDSHIFT a Forge načte jeho nástroje.</div>';
@@ -85,8 +85,8 @@ async function runAction(action, message) {
 cards.addEventListener('click', async event => {
   const start = event.target.dataset.start, stop = event.target.dataset.stop, view = event.target.dataset.view;
   if (view) showLog(view);
-  if (start) await runAction(() => window.forge.start(start), `STARTING ${labels[start].toUpperCase()}…`);
-  if (stop) await runAction(() => window.forge.stop(stop), `STOPPING ${labels[stop].toUpperCase()}…`);
+  if (start) await runAction(() => window.forge.start(start), `STARTING ${(labels[start] || start).toUpperCase()}…`);
+  if (stop) await runAction(() => window.forge.stop(stop), `STOPPING ${(labels[stop] || stop).toUpperCase()}…`);
 });
 startButton.onclick = () => runAction(() => window.forge.startStack(), 'STARTING DEV STACK…');
 stopButton.onclick = () => runAction(() => window.forge.stopStack(), 'STOPPING ALL…');
