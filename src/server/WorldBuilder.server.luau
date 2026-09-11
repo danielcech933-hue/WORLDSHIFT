@@ -1,4 +1,5 @@
 local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
 
 local world = Workspace:WaitForChild("World")
 local buildings = world:WaitForChild("Buildings")
@@ -88,5 +89,17 @@ if not npcs:FindFirstChild("Guide") then
 	model.PrimaryPart = root
 	makeLabel(head, "THE GUIDE", Vector3.new(0, 2.5, 0))
 end
+
+local guide = npcs:WaitForChild("Guide")
+local basePivot = guide:GetPivot()
+local elapsed = 0
+RunService.Heartbeat:Connect(function(dt)
+	if not guide.Parent then
+		return
+	end
+	elapsed += dt
+	local y = math.sin(elapsed * 1.4) * 0.18
+	guide:PivotTo(basePivot * CFrame.new(0, y, 0))
+end)
 
 print("[WORLDSHIFT] Hoshikawa arrival scene ready")
