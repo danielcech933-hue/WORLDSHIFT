@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "channel": "stable",
+  "plugins": [
+    {
+      "id": "studio-inspector",
+      "name": "Studio Inspector",
+      "version": "0.1.0",
+      "kind": "builtin",
+      "status": "planned",
+      "capabilities": ["studio.read", "selection.read", "output.read", "scene.inspect"]
+    },
+    {
+      "id": "world-builder",
+      "name": "World Builder",
+      "version": "0.1.0",
+      "kind": "remote",
+      "status": "planned",
+      "capabilities": ["project.read", "project.write", "studio.scene.write"]
+    },
+    {
+      "id": "test-runner",
+      "name": "Test Runner",
+      "version": "0.1.0",
+      "kind": "remote",
+      "status": "planned",
+      "capabilities": ["studio.playtest", "studio.output.read", "project.read"]
+    },
+    {
+      "id": "git-ops",
+      "name": "Git Operations",
+      "version": "0.1.0",
+      "kind": "builtin",
+      "status": "planned",
+      "capabilities": ["git.read", "git.write", "git.rollback"]
+    }
+  ]
+}
