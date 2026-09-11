@@ -211,9 +211,10 @@ function createWindow() {
     width: 1240, height: 820, minWidth: 1000, minHeight: 680,
     title: 'ROBLOX FORGE', backgroundColor: '#070a10', show: false,
     webPreferences: {
-      preload: path.join(DESKTOP_DIR, 'preload.mjs'),
+      preload: path.join(DESKTOP_DIR, 'preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: true,
     },
   });
   mainWindow.loadFile(path.join(DESKTOP_DIR, 'index.html'));
