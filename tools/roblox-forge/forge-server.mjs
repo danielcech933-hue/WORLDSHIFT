@@ -2,6 +2,7 @@ import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { spawn } from 'node:child_process';
 
 const ROOT = process.cwd();
 const PORT = Number(process.env.FORGE_PORT || 43117);
@@ -16,14 +17,101 @@ const PUBLIC_DIR = path.join(ROOT, 'tools', 'roblox-forge', 'public');
 
 const state = {
   bridge: 'online',
-  version: '0.1.0',
+  version: '0.2.0',
   startedAt: new Date().toISOString(),
   lastStudioHeartbeat: null,
   lastStudioState: null,
   lastCommand: null,
   lastResult: null,
-  github: { connected: Boolean(GITHUB_TOKEN), lastPoll: null, lastError: null }
+  github: { connected: Boolean(GITHUB_TOKEN), lastPoll: null, lastError: null },
+  processes: {}
 };
+
+const PROCESS_DEFINITIONS = {
+  rojo: {
+    label: 'Rojo',
+    command: 'rojo',
+    args: ['serve', 'default.project.json'],
+    cwd: ROOT,
+    persistent: true
+  },
+  codex: {
+    label: 'Codex CLI',
+    command: 'codex',
+    args: [],
+    cwd: ROOT,
+    persistent: true
+  }
+};
+
+const managedProcesses = new Map();
+const processLogs = new Map();
+
+function ensureProcessState(id) {
+  if (!state.processes[id]) {
+    state.processes[id] = { id, label: PROCESS_DEFINITIONS[id]?.label || id, running: false, pid: null, exitCode: null, log: '' };
+  }
+  return state.processes[id];
+}
+
+function appendProcessLog(id, chunk) {
+  const current = processLogs.get(id) || '';
+  const next = (current + String(chunk)).slice(-30000);
+  processLogs.set(id, next);
+  const entry = ensureProcessState(id);
+  entry.log = next;
+}
+
+function startManagedProcess(id) {
+  const definition = PROCESS_DEFINITIONS[id];
+  if (!definition) throw new Error(`Unknown managed process: ${id}`);
+  if (managedProcesses.has(id)) return ensureProcessState(id);
+
+  const child = spawn(definition.command, definition.args, {
+    cwd: definition.cwd,
+    env: process.env,
+    windowsHide: true,
+    stdio: ['pipe', 'pipe', 'pipe'],
+    shell: false
+  });
+
+  managedProcesses.set(id, child);
+  processLogs.set(id, '');
+  const entry = ensureProcessState(id);
+  entry.running = true;
+  entry.pid = child.pid || null;
+  entry.exitCode = null;
+  entry.log = '';
+
+  child.stdout?.on('data', chunk => appendProcessLog(id, chunk));
+  child.stderr?.on('data', chunk => appendProcessLog(id, chunk));
+  child.on('error', error => appendProcessLog(id, `[FORGE] process error: ${error.message}\n`));
+  child.on('exit', (code, signal) => {
+    managedProcesses.delete(id);
+    const current = ensureProcessState(id);
+    current.running = false;
+    current.pid = null;
+    current.exitCode = code;
+    appendProcessLog(id, `\n[FORGE] ${definition.label} exited (${signal || code ?? 'unknown'}).\n`);
+  });
+
+  appendProcessLog(id, `[FORGE] Starting ${definition.label}: ${definition.command} ${definition.args.join(' ')}\n`);
+  return entry;
+}
+
+function stopManagedProcess(id) {
+  const child = managedProcesses.get(id);
+  if (!child) return ensureProcessState(id);
+  try { child.kill(); } catch {}
+  return ensureProcessState(id);
+}
+
+function sendProcessInput(id, input) {
+  const child = managedProcesses.get(id);
+  if (!child || !child.stdin?.writable) throw new Error(`${id} is not running`);
+  child.stdin.write(String(input));
+  return ensureProcessState(id);
+}
 
 async function ensureRuntime() {
   await fs.mkdir(STATE_DIR, { recursive: true });
@@ -31,6 +119,7 @@ async function ensureRuntime() {
     const raw = await fs.readFile(STATE_FILE, 'utf8');
     state.lastStudioState = JSON.parse(raw);
   } catch {}
+  for (const id of Object.keys(PROCESS_DEFINITIONS)) ensureProcessState(id);
 }
 
 function authorized(req) {
@@ -126,7 +215,6 @@ async function executeCommand(command) {
   const type = command.type;
   const args = command.args || {};
 
-  // Deliberately allowlisted. No arbitrary shell execution in Forge v0.1.
   switch (type) {
     case 'ping':
       return { ok: true, type, message: 'Forge bridge is alive.' };
@@ -141,6 +229,15 @@ async function executeCommand(command) {
       await fs.mkdir(folder, { recursive: true });
       return { ok: true, type, path: folder };
     }
+
+    case 'process_start':
+      return { ok: true, type, process: startManagedProcess(safeName(args.id)) };
+
+    case 'process_stop':
+      return { ok: true, type, process: stopManagedProcess(safeName(args.id)) };
+
+    case 'process_input':
+      return { ok: true, type, process: sendProcessInput(safeName(args.id), args.input || '') };
 
     default:
       throw new Error(`Unsupported Forge command: ${type}`);
@@ -209,7 +306,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'GET' && await serveStatic(url.pathname, res)) return;
 
     if (req.method === 'GET' && url.pathname === '/api/health') {
-      return send(res, 200, { ok: true, ...state });
+      return send(res, 200, { ok: true, ...state, processes: Object.values(state.processes) });
     }
 
     if (req.method === 'POST' && url.pathname === '/api/studio/state') {
@@ -239,3 +336,12 @@ server.listen(PORT, HOST, () => {
 });
 
 setInterval(pollGithub, 3000);
+
+process.on('SIGINT', () => {
+  for (const id of managedProcesses.keys()) stopManagedProcess(id);
+  process.exit(0);
+});
+process.on('SIGTERM', () => {
+  for (const id of managedProcesses.keys()) stopManagedProcess(id);
+  process.exit(0);
+});
