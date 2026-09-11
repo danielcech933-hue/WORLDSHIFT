@@ -1,17 +1,23 @@
 {
   "name": "roblox-forge",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
-  "description": "ROBLOX FORGE desktop development platform and local bridge.",
+  "description": "ROBLOX FORGE desktop development platform, local bridge, MCP gateway and extensible plugin host.",
   "type": "module",
   "main": "desktop/main.mjs",
   "scripts": {
     "start": "node forge-server.mjs",
     "desktop": "electron .",
+    "mcp": "node mcp-server.mjs",
+    "desktop:dev": "electron .",
     "build:win": "electron-builder --win nsis portable"
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.0.0",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "electron": "^38.0.0",
@@ -21,7 +27,7 @@
     "appId": "com.robloxforge.desktop",
     "productName": "ROBLOX FORGE",
     "directories": { "output": "dist" },
-    "files": ["desktop/**/*", "forge-server.mjs", "public/**/*", "package.json"],
+    "files": ["desktop/**/*", "forge-server.mjs", "mcp-server.mjs", "plugins/**/*", "public/**/*", "package.json"],
     "asar": true,
     "compression": "maximum",
     "win": {
