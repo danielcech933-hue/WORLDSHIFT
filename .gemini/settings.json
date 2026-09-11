@@ -1,0 +1,18 @@
+{
+  "general": {
+    "defaultApprovalMode": "default",
+    "enableAutoUpdate": true
+  },
+  "mcpServers": {
+    "roblox-forge": {
+      "command": "node",
+      "args": ["tools/roblox-forge/mcp-server.mjs"],
+      "cwd": ".",
+      "timeout": 600000,
+      "trust": false
+    }
+  },
+  "mcp": {
+    "allowed": ["roblox-forge"]
+  }
+}
