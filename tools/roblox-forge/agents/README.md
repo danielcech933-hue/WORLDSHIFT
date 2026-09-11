@@ -1,54 +1,59 @@
 # ROBLOX FORGE Agent Layer
 
-Forge is agent-agnostic. The desktop shell can host multiple coding agents while every agent uses the same Forge control plane and project rules.
+Forge is agent-agnostic. The desktop shell can host multiple coding agents while every agent uses the same Forge control plane, project rules, MCP tools and safety policy.
 
-## Current agents
+## Current agent adapters
 
-### Gemini CLI — primary free local agent
+The registry currently supports:
 
-Gemini CLI is the first-class free agent integration. It supports MCP servers and headless/automation workflows, so it can connect directly to the local `roblox-forge` MCP server from the project workspace.
+- **OpenCode** — preferred general-purpose local agent when installed; supports role routing and local MCP.
+- **Claude Code** — supported when the CLI is installed and authenticated.
+- **Codex CLI** — supported when the CLI is installed and authenticated.
 
-The repository includes `.gemini/settings.json` with the Forge MCP connection already configured.
+Availability is detected at runtime. Forge never assumes that a particular vendor CLI is installed or that a free quota exists.
 
-Install:
-
-```powershell
-npm install -g @google/gemini-cli
-```
-
-Then run `gemini` once and authenticate with a personal Google account.
+> **Important:** older Forge prototypes referenced Gemini CLI as a free personal agent. That documentation is obsolete and has been removed. Do not rely on old Gemini CLI installation instructions.
 
 ## Agent architecture
 
 ```text
-                  ROBLOX FORGE
-                       │
-                Agent Control API
-                       │
-        ┌──────────────┼──────────────┐
-        │              │              │
-     Gemini CLI      Codex CLI     Future agents
-        │              │              │
-        └──────────────┼──────────────┘
-                       │
-                     MCP
-                       │
-                Forge Control Plane
-                       │
-       Project / Studio / Git / Tests / Memory
+                         ROBLOX FORGE
+                              │
+                      Agent Control API
+                              │
+             ┌────────────────┼────────────────┐
+             │                │                │
+          OpenCode       Claude Code       Codex CLI
+             │                │                │
+             └────────────────┼────────────────┘
+                              │
+                             MCP
+                              │
+                     Forge Control Plane
+                              │
+          Project / Studio / Git / Tests / Memory
 ```
 
-The agent is not the platform. It is replaceable compute. This means we can add or remove agents without rebuilding WORLDSHIFT or changing the Forge project model.
+The agent is not the platform. It is replaceable compute. Adding or removing an agent should not require changing the WORLDSHIFT project model.
+
+## Roles
+
+- `architect` — design before implementation.
+- `coder` — implement an approved plan.
+- `reviewer` — inspect for regressions, security and maintainability.
+- `researcher` — research current documentation and compare approaches.
+- `tester` — run diagnostics/tests and reproduce failures.
 
 ## Safety
 
-Forge MCP keeps destructive operations explicit. The Gemini workspace uses normal approval mode by default. Do not enable YOLO mode for a shared or untrusted project unless you intentionally accept automatic tool execution.
+The default policy is `supervised`. Destructive or broad changes should require explicit approval. Keep agent permissions least-privilege and prefer Forge/MCP tools over arbitrary shell access.
 
 ## Roadmap
 
 - Agent capability detection and health checks
+- Desktop AI Team panel
 - Agent profiles and model preferences
-- Agent fallback routing
+- Fallback routing
 - Task queue with resumable jobs
 - Plan/implement/verify modes
 - Git worktree isolation for risky changes
