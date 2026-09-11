@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="cs">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Roblox Forge</title>
+  <title>ROBLOX FORGE</title>
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
@@ -16,23 +16,41 @@
       <div id="bridge" class="status">● CHECKING</div>
     </header>
 
+    <section class="hero panel">
+      <div>
+        <div class="panel-title">ONE CONTROL CENTER</div>
+        <h2>Žádné čtyři CMD okna. Jedna Forge konzole.</h2>
+        <p>Rojo, Codex a další vývojové procesy mohou běžet skrytě na pozadí. Tady je spustíš, zastavíš a uvidíš jejich logy.</p>
+      </div>
+      <div class="actions">
+        <button id="startAll" class="primary">START DEV STACK</button>
+        <button id="stopAll">STOP DEV STACK</button>
+        <button id="ping">PING</button>
+      </div>
+    </section>
+
     <section class="grid">
-      <article class="panel hero">
-        <div class="panel-title">PROJECT CONTROL</div>
-        <h2>Build. Inspect. Test. Iterate.</h2>
-        <p>Forge is the local control plane between an AI developer, Roblox Studio, GitHub and Rojo.</p>
-        <div class="actions">
-          <button id="ping">PING BRIDGE</button>
-          <button id="refresh">REFRESH STATE</button>
-        </div>
+      <article class="panel">
+        <div class="panel-title">DEVELOPMENT PROCESSES</div>
+        <div id="processes" class="processes"></div>
       </article>
 
       <article class="panel">
         <div class="panel-title">CONNECTIONS</div>
-        <div class="row"><span>Bridge</span><strong id="bridgeState">—</strong></div>
+        <div class="row"><span>Forge Bridge</span><strong id="bridgeState">—</strong></div>
         <div class="row"><span>GitHub</span><strong id="githubState">—</strong></div>
         <div class="row"><span>Roblox Studio</span><strong id="studioState">—</strong></div>
         <div class="row"><span>Last heartbeat</span><strong id="heartbeat">—</strong></div>
+      </article>
+
+      <article class="panel wide">
+        <div class="panel-title">LIVE PROCESS LOG</div>
+        <div id="logTitle" class="log-title">Vyber proces</div>
+        <pre id="processLog">Klikni na Rojo nebo Codex.</pre>
+        <div id="processInputRow" class="command-line hidden">
+          <input id="processInput" placeholder="Poslat vstup procesu…" />
+          <button id="sendInput">SEND</button>
+        </div>
       </article>
 
       <article class="panel wide">
@@ -43,7 +61,7 @@
       <article class="panel wide">
         <div class="panel-title">COMMAND CONSOLE</div>
         <div class="command-line">
-          <input id="command" placeholder='Try: {"type":"ping"}' />
+          <input id="command" placeholder='Např. {"type":"ping"}' />
           <button id="send">EXECUTE</button>
         </div>
         <pre id="result">No command executed.</pre>
