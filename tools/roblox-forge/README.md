@@ -1,82 +1,82 @@
-# Roblox Forge
+# ROBLOX FORGE 1.0
 
-Roblox Forge is the local development control plane for AI-assisted Roblox projects.
+ROBLOX FORGE is the local Windows development control plane for WORLDSHIFT. It replaces a wall of CMD windows with one desktop application.
 
-## v0.1 goals
+## What the desktop app manages
 
-- Local Node.js bridge on `127.0.0.1:43117`
-- Web control panel
-- GitHub command inbox/outbox
-- Roblox Studio plugin heartbeat
-- Studio selection / active-script / workspace snapshot
-- Explicit allowlist for executable commands
-- Designed to grow into a reusable multi-project Roblox development platform
+- Forge Bridge on `127.0.0.1:43117`
+- Rojo project sync
+- Codex CLI (start/stop/log from the app)
+- Roblox Studio bridge plugin
+- project selection and persistent project memory
+- live process logs
+- start/stop development stack
+- Studio bridge installation and heartbeat status
+- GitHub command inbox/outbox through the Forge server
 
-## Quick install (Windows)
+## First setup
 
-From the repository root, after `git pull`:
-
-```powershell
-Set-ExecutionPolicy -Scope Process Bypass
-.\tools\roblox-forge\install.ps1
-```
-
-The installer copies the Forge Studio plugin into Roblox Studio's local Plugins folder and checks that Node.js is available. Roblox documents local plugins and the local Plugins directory in its Studio plugin documentation.
-
-Then restart Roblox Studio once so the local plugin loads cleanly.
-
-## Start Forge
-
-From the repository root:
+1. From the repository root run:
 
 ```powershell
-node tools/roblox-forge/forge-server.mjs
+git pull
 ```
 
-Then open `http://127.0.0.1:43117`.
-
-Optional GitHub configuration:
+2. Build the Windows release:
 
 ```powershell
-$env:FORGE_GITHUB_TOKEN = "YOUR_GITHUB_TOKEN"
-$env:FORGE_GITHUB_REPO = "danielcech933-hue/WORLDSHIFT"
-$env:FORGE_GITHUB_BRANCH = "main"
-$env:FORGE_SECRET = "choose-a-local-secret"
-node tools/roblox-forge/forge-server.mjs
+.\tools\roblox-forge\build-windows.bat
 ```
 
-Do not commit a GitHub token. Use an environment variable or another local secret store.
+3. In `tools/roblox-forge/dist/` use either:
+   - `ROBLOX-FORGE-1.0.0-x64.exe` for the portable version, or
+   - the generated NSIS setup executable for an installed desktop shortcut.
+
+## Daily workflow
+
+1. Open **ROBLOX FORGE**.
+2. Forge automatically looks for `Desktop\WORLDSHIFT\WORLDSHIFT` and remembers the last valid project.
+3. If needed, click **VYBRAT PROJEKT** and select the WORLDSHIFT root.
+4. Click **⚡ INSTALOVAT STUDIO BRIDGE** once after a fresh machine/plugin reset.
+5. Click **▶ SPUSTIT DEV STACK**.
+6. Work in Roblox Studio. Rojo and Forge run in the background; their output appears in Developer Console.
+7. Use the process cards to start/stop individual tools when needed.
+
+## Project validation
+
+Forge accepts a project only when the selected folder contains:
+
+- `default.project.json`
+- `src/`
+- `tools/roblox-forge/forge-server.mjs`
+
+This prevents accidentally selecting the wrong directory.
 
 ## Studio bridge
 
-`studio/ForgePlugin.server.lua` is the first Studio connector. The Windows installer copies it to `%LOCALAPPDATA%\Roblox\Plugins\RobloxForge.lua`.
+The app can install `studio/ForgePlugin.server.lua` to:
 
-The plugin sends a small state snapshot every two seconds. v0.1 intentionally does not execute arbitrary code or shell commands.
+`%LOCALAPPDATA%\Roblox\Plugins\RobloxForge.lua`
 
-## Uninstall
+The plugin posts a state heartbeat to Forge every two seconds. The desktop app reports the bridge as connected when a recent heartbeat is available.
+
+## Security model
+
+Forge uses an explicit process allowlist. It does not expose an arbitrary shell-command textbox. The desktop UI can only control the known development processes and the approved Forge bridge operations.
+
+Optional GitHub integration uses environment variables. Never commit a GitHub token.
+
+## Web bridge
+
+The local server can be opened at:
+
+`http://127.0.0.1:43117`
+
+Available core endpoints include `/api/health`, `/api/studio/state`, and `/api/command`.
+
+## Uninstall Studio plugin
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
 .\tools\roblox-forge\uninstall.ps1
 ```
-
-## GitHub command protocol
-
-AI can place one approved command in:
-
-`.forge/inbox/next-command.json`
-
-Example:
-
-```json
-{
-  "id": "example-001",
-  "type": "ping"
-}
-```
-
-Forge consumes the command and writes the result to:
-
-`.forge/outbox/last-result.json`
-
-Future versions will add signed commands, project isolation, Studio operations, test orchestration, visual capture, snapshots and rollback.
