@@ -12,22 +12,15 @@ let mainWindow = null;
 
 app.setAppUserModelId(APP_ID);
 
-function projectLooksValid(root) {
-  if (!root) return false;
-  return Boolean(root) && requireFile(root, 'default.project.json') && requireFile(root, 'src') && requireFile(root, 'tools', 'roblox-forge', 'forge-server.mjs');
-}
-
-async function requireFile(root, ...parts) {
-  try {
-    await fs.access(path.join(root, ...parts));
-    return true;
-  } catch {
-    return false;
-  }
+async function requirePath(root, ...parts) {
+  try { await fs.access(path.join(root, ...parts)); return true; } catch { return false; }
 }
 
 async function isValidProject(root) {
-  return Boolean(root) && await requireFile(root, 'default.project.json') && await requireFile(root, 'src') && await requireFile(root, 'tools', 'roblox-forge', 'forge-server.mjs');
+  return Boolean(root)
+    && await requirePath(root, 'default.project.json')
+    && await requirePath(root, 'src')
+    && await requirePath(root, 'tools', 'roblox-forge', 'forge-server.mjs');
 }
 
 async function loadConfig() {
@@ -35,7 +28,6 @@ async function loadConfig() {
     const config = JSON.parse(await fs.readFile(CONFIG_FILE(), 'utf8'));
     if (await isValidProject(config.projectRoot)) projectRoot = config.projectRoot;
   } catch {}
-
   if (!projectRoot) projectRoot = await findProject();
   if (projectRoot) await saveConfig();
 }
@@ -54,39 +46,21 @@ async function findProject() {
     path.join(home, 'Documents', 'WORLDSHIFT'),
     path.resolve(process.cwd()),
   ];
-
-  for (const candidate of candidates) {
-    if (await isValidProject(candidate)) return candidate;
-  }
+  for (const candidate of candidates) if (await isValidProject(candidate)) return candidate;
   return null;
 }
 
-function forgeServerPath() {
-  return path.join(projectRoot, 'tools', 'roblox-forge', 'forge-server.mjs');
-}
-
-function rojoProjectPath() {
-  return path.join(projectRoot, 'default.project.json');
-}
+function forgeServerPath() { return path.join(projectRoot, 'tools', 'roblox-forge', 'forge-server.mjs'); }
+function rojoProjectPath() { return path.join(projectRoot, 'default.project.json'); }
+function studioPluginSource() { return path.join(projectRoot, 'tools', 'roblox-forge', 'studio', 'ForgePlugin.server.lua'); }
+function studioPluginTarget() { return path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'Roblox', 'Plugins', 'RobloxForge.lua'); }
 
 function definitions() {
   if (!projectRoot) return {};
   return {
-    forge: {
-      label: 'Forge Bridge',
-      command: process.env.FORGE_NODE || 'node',
-      args: [forgeServerPath()],
-    },
-    rojo: {
-      label: 'Rojo',
-      command: 'rojo',
-      args: ['serve', rojoProjectPath()],
-    },
-    codex: {
-      label: 'Codex CLI',
-      command: 'codex',
-      args: [],
-    },
+    forge: { label: 'Forge Bridge', command: process.env.FORGE_NODE || 'node', args: [forgeServerPath()] },
+    rojo: { label: 'Rojo', command: 'rojo', args: ['serve', rojoProjectPath()] },
+    codex: { label: 'Codex CLI', command: 'codex', args: [] },
   };
 }
 
@@ -97,7 +71,6 @@ function send(channel, payload) {
 function start(id) {
   if (!projectRoot) throw new Error('Nejdřív vyber nebo automaticky najdi projekt WORLDSHIFT.');
   if (children.has(id)) return { ok: true, running: true, alreadyRunning: true, pid: children.get(id).entry.pid };
-
   const def = definitions()[id];
   if (!def) throw new Error(`Neznámý proces: ${id}`);
 
@@ -110,18 +83,15 @@ function start(id) {
   });
 
   const entry = { id, label: def.label, pid: child.pid ?? null, running: true, log: '' };
-  const item = { child, entry };
-  children.set(id, item);
-
-  const append = (chunk) => {
+  children.set(id, { child, entry });
+  const append = chunk => {
     const text = String(chunk);
     entry.log = (entry.log + text).slice(-50000);
     send('process-log', { id, text });
   };
-
   child.stdout?.on('data', append);
   child.stderr?.on('data', append);
-  child.on('error', (error) => {
+  child.on('error', error => {
     append(`[FORGE ERROR] ${error.message}\n`);
     entry.running = false;
     children.delete(id);
@@ -134,7 +104,6 @@ function start(id) {
     children.delete(id);
     send('process-exit', { id, code, signal });
   });
-
   append(`[FORGE] Starting ${def.label} (PID ${child.pid ?? 'unknown'})\n`);
   return { ok: true, running: true, pid: child.pid ?? null };
 }
@@ -146,21 +115,11 @@ function stop(id) {
   children.delete(id);
   return { ok: true, running: false };
 }
-
-function stopAll() {
-  for (const id of [...children.keys()]) stop(id);
-}
-
+function stopAll() { for (const id of [...children.keys()]) stop(id); }
 function status() {
   return Object.entries(definitions()).map(([id, def]) => {
     const item = children.get(id);
-    return {
-      id,
-      label: def.label,
-      running: Boolean(item),
-      pid: item?.entry.pid ?? null,
-      log: item?.entry.log ?? '',
-    };
+    return { id, label: def.label, running: Boolean(item), pid: item?.entry.pid ?? null, log: item?.entry.log ?? '' };
   });
 }
 
@@ -171,7 +130,6 @@ async function chooseProject() {
     buttonLabel: 'Vybrat WORLDSHIFT',
     properties: ['openDirectory'],
   });
-
   if (result.canceled || !result.filePaths?.[0]) return { ok: false, canceled: true, projectRoot };
 
   const selected = path.normalize(result.filePaths[0]);
@@ -198,34 +156,47 @@ async function resetProject() {
   return { ok: true, projectRoot: null };
 }
 
+async function installStudioPlugin() {
+  if (!projectRoot) throw new Error('Nejdřív vyber projekt WORLDSHIFT.');
+  const source = studioPluginSource();
+  const target = studioPluginTarget();
+  if (!(await requirePath(projectRoot, 'tools', 'roblox-forge', 'studio', 'ForgePlugin.server.lua'))) {
+    throw new Error(`Studio plugin nebyl nalezen: ${source}`);
+  }
+  await fs.mkdir(path.dirname(target), { recursive: true });
+  await fs.copyFile(source, target);
+  return { ok: true, target };
+}
+
+async function studioHealth() {
+  try {
+    const response = await fetch('http://127.0.0.1:43117/api/health');
+    if (!response.ok) return { online: false, reason: `HTTP ${response.status}` };
+    const health = await response.json();
+    const heartbeat = health.lastStudioHeartbeat ? Date.parse(health.lastStudioHeartbeat) : 0;
+    const connected = heartbeat > 0 && (Date.now() - heartbeat) < 8000;
+    return { online: true, connected, heartbeat: health.lastStudioHeartbeat, health };
+  } catch (error) {
+    return { online: false, connected: false, reason: error.message };
+  }
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1240,
-    height: 820,
-    minWidth: 1000,
-    minHeight: 680,
-    title: 'ROBLOX FORGE',
-    backgroundColor: '#070a10',
-    show: false,
-    webPreferences: {
-      preload: path.join(app.getAppPath(), 'desktop', 'preload.mjs'),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
+    width: 1240, height: 820, minWidth: 1000, minHeight: 680,
+    title: 'ROBLOX FORGE', backgroundColor: '#070a10', show: false,
+    webPreferences: { preload: path.join(app.getAppPath(), 'desktop', 'preload.mjs'), contextIsolation: true, nodeIntegration: false },
   });
-
   mainWindow.loadFile(path.join(app.getAppPath(), 'desktop', 'index.html'));
   mainWindow.once('ready-to-show', () => mainWindow.show());
 }
 
-ipcMain.handle('app-info', () => ({
-  version: app.getVersion(),
-  packaged: app.isPackaged,
-  platform: process.platform,
-}));
+ipcMain.handle('app-info', () => ({ version: app.getVersion(), packaged: app.isPackaged, platform: process.platform }));
 ipcMain.handle('project-get', () => ({ projectRoot }));
 ipcMain.handle('project-choose', chooseProject);
 ipcMain.handle('project-reset', resetProject);
+ipcMain.handle('studio-install', installStudioPlugin);
+ipcMain.handle('studio-health', studioHealth);
 ipcMain.handle('process-status', () => status());
 ipcMain.handle('process-start', (_event, id) => start(id));
 ipcMain.handle('process-stop', (_event, id) => stop(id));
@@ -246,13 +217,9 @@ ipcMain.handle('process-input', (_event, id, input) => {
 });
 ipcMain.handle('open-folder', () => projectRoot ? shell.openPath(projectRoot) : chooseProject());
 
-process.on('uncaughtException', (error) => send('app-error', { message: error.message, stack: error.stack }));
-process.on('unhandledRejection', (reason) => send('app-error', { message: String(reason) }));
+process.on('uncaughtException', error => send('app-error', { message: error.message, stack: error.stack }));
+process.on('unhandledRejection', reason => send('app-error', { message: String(reason) }));
 
-app.whenReady().then(async () => {
-  await loadConfig();
-  createWindow();
-});
-
+app.whenReady().then(async () => { await loadConfig(); createWindow(); });
 app.on('before-quit', stopAll);
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
