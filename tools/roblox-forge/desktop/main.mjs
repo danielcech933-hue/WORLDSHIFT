@@ -139,13 +139,21 @@ function resolveRojoCommand() {
   return findExecutableInCandidates(candidates);
 }
 
+function resolveGeminiCommand() {
+  const explicit = process.env.GEMINI_PATH?.trim();
+  if (explicit && isFile(explicit)) return path.normalize(explicit);
+  return findOnPath(process.platform === 'win32' ? 'gemini.cmd' : 'gemini') || findOnPath('gemini') || null;
+}
+
 function definitions() {
   if (!projectRoot) return {};
   const rojoCommand = resolveRojoCommand();
+  const geminiCommand = resolveGeminiCommand();
   return {
     forge: { label: 'Forge Bridge', command: process.env.FORGE_NODE || 'node', args: [forgeServerPath()] },
     rojo: { label: 'Rojo', command: rojoCommand || 'rojo', args: ['serve', rojoProjectPath()] },
     codex: { label: 'Codex CLI', command: process.env.CODEX_PATH || 'codex', args: [] },
+    gemini: { label: geminiCommand ? 'Gemini CLI · FREE AGENT' : 'Gemini CLI · NOT INSTALLED', command: geminiCommand || 'gemini', args: [] },
   };
 }
 
@@ -161,6 +169,9 @@ function start(id) {
 
   if (id === 'rojo' && !resolveRojoCommand()) {
     throw new Error('Rojo nebyl nalezen. Forge hledal PATH, C:\\Rojo, Cargo, Aftman, Foreman, Scoop a běžné instalace.');
+  }
+  if (id === 'gemini' && !resolveGeminiCommand()) {
+    throw new Error('Gemini CLI nebyl nalezen. Nainstaluj ho přes npm a přihlas se Google účtem; Forge ho pak automaticky najde.');
   }
 
   const child = spawn(def.command, def.args, {
