@@ -1,8 +1,9 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
-import { spawn } from 'node:child_process';
+import { spawn, execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs/promises';
+import fsSync from 'node:fs';
 import os from 'node:os';
 
 const APP_ID = 'com.robloxforge.desktop';
@@ -83,12 +84,47 @@ function rojoProjectPath() { return path.join(projectRoot, 'default.project.json
 function studioPluginSource() { return path.join(projectRoot, 'tools', 'roblox-forge', 'studio', 'ForgePlugin.server.lua'); }
 function studioPluginTarget() { return path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'Roblox', 'Plugins', 'RobloxForge.lua'); }
 
+function findOnPath(command) {
+  if (process.platform !== 'win32') return null;
+  try {
+    const output = execFileSync('where.exe', [command], {
+      encoding: 'utf8',
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    const match = output.split(/\r?\n/).map(line => line.trim()).find(Boolean);
+    return match ? path.normalize(match) : null;
+  } catch {
+    return null;
+  }
+}
+
+function resolveRojoCommand() {
+  const explicit = process.env.ROJO_PATH?.trim();
+  if (explicit && fsSync.existsSync(explicit)) return path.normalize(explicit);
+
+  const onPath = findOnPath('rojo');
+  if (onPath) return onPath;
+
+  const home = os.homedir();
+  const localAppData = process.env.LOCALAPPDATA || path.join(home, 'AppData', 'Local');
+  const candidates = [
+    path.join(home, '.cargo', 'bin', 'rojo.exe'),
+    path.join(home, 'scoop', 'shims', 'rojo.exe'),
+    path.join(localAppData, 'Rojo', 'rojo.exe'),
+    path.join(localAppData, 'Programs', 'Rojo', 'rojo.exe'),
+  ];
+
+  return candidates.find(candidate => fsSync.existsSync(candidate)) || null;
+}
+
 function definitions() {
   if (!projectRoot) return {};
+  const rojoCommand = resolveRojoCommand();
   return {
     forge: { label: 'Forge Bridge', command: process.env.FORGE_NODE || 'node', args: [forgeServerPath()] },
-    rojo: { label: 'Rojo', command: 'rojo', args: ['serve', rojoProjectPath()] },
-    codex: { label: 'Codex CLI', command: 'codex', args: [] },
+    rojo: { label: 'Rojo', command: rojoCommand || 'rojo', args: ['serve', rojoProjectPath()] },
+    codex: { label: 'Codex CLI', command: process.env.CODEX_PATH || 'codex', args: [] },
   };
 }
 
@@ -101,6 +137,11 @@ function start(id) {
   if (children.has(id)) return { ok: true, running: true, alreadyRunning: true, pid: children.get(id).entry.pid };
   const def = definitions()[id];
   if (!def) throw new Error(`Neznámý proces: ${id}`);
+
+  if (id === 'rojo' && !resolveRojoCommand()) {
+    throw new Error('Rojo nebyl nalezen. Nainstaluj Rojo nebo nastav proměnnou ROJO_PATH na cestu k rojo.exe.');
+  }
+
   const child = spawn(def.command, def.args, {
     cwd: projectRoot,
     env: { ...process.env, FORCE_COLOR: '0' },
