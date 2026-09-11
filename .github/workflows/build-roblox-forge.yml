@@ -1,0 +1,33 @@
+name: Build ROBLOX FORGE
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/roblox-forge/**'
+      - '.github/workflows/build-roblox-forge.yml'
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: tools/roblox-forge
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install
+      - name: Build Windows installers
+        run: npm run build:win
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: ROBLOX-FORGE-Windows
+          path: tools/roblox-forge/dist/*
+          if-no-files-found: error
