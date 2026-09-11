@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ROBLOX FORGE</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand"><div class="mark">RF</div><div><div class="eyebrow">ROBLOX DEVELOPMENT PLATFORM</div><h1>ROBLOX FORGE</h1></div></div>
+      <div class="top-actions"><button id="startStack" class="primary">▶ START DEV STACK</button><button id="stopStack">■ STOP ALL</button></div>
+    </header>
+    <main>
+      <section class="hero panel"><div><div class="eyebrow">ONE APP. ONE WORKSPACE.</div><h2>Everything you need to build WORLDSHIFT.</h2><p>Forge manages the development tools in the background so you don't need a wall of CMD windows.</p></div><button id="openFolder">OPEN PROJECT</button></section>
+      <section id="cards" class="cards"></section>
+      <section class="panel logs"><div class="section-head"><div><div class="eyebrow">LIVE OUTPUT</div><h3>Developer Console</h3></div><select id="logSelect"></select></div><pre id="log">Select a process to view its output.</pre><div class="input-row"><input id="input" placeholder="Send input to the selected process…"/><button id="send">SEND</button></div></section>
+    </main>
+    <footer><span>ROBLOX FORGE 0.3</span><span id="status">READY</span></footer>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>
