@@ -14,8 +14,26 @@ const RUN_TIMEOUT_MS = Number(process.env.FORGE_AGENT_TIMEOUT_MS || 20 * 60 * 10
 const running = new Map();
 
 async function readRegistry() { return JSON.parse(await fs.readFile(REGISTRY_PATH, 'utf8')); }
-function commandExists(command) { return new Promise(resolve => { const checker = process.platform === 'win32' ? 'where.exe' : 'which'; const child = spawn(checker, [command], { windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'] }); let output=''; child.stdout?.on('data', c => output += String(c)); child.on('close', code => resolve(code === 0 ? output.split(/\r?\n/).map(x=>x.trim()).find(Boolean) || command : null)); child.on('error', () => resolve(null)); }); }
-async function discoverAgents() { const registry=await readRegistry(); return Promise.all(registry.agents.map(async agent=>{const executable=await commandExists(agent.command);return {...agent,executable,available:Boolean(executable),running:[...running.values()].some(x=>x.agent===agent.id)};})); }
+function commandExists(command) {
+    return new Promise(resolve => {
+        const checker = process.platform === 'win32' ? 'where.exe' : 'which';
+        const child = spawn(checker, [command], { windowsHide: true, stdio: ['ignore', 'pipe', 'ignore'] });
+        let output = '';
+        child.stdout?.on('data', c => output += String(c));
+        child.on('close', code => {
+            if (code !== 0) return resolve(null);
+            const matches = output.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+            if (!matches.length) return resolve(command);
+            if (process.platform === 'win32') {
+                const launcher = matches.find(x => /\.(cmd|bat|exe)$/i.test(x));
+                return resolve(launcher || matches[0]);
+            }
+            resolve(matches[0]);
+        });
+        child.on('error', () => resolve(null));
+    });
+}
+function discoverAgents() { return readRegistry().then(registry => Promise.all(registry.agents.map(async agent => { const executable = await commandExists(agent.command); return { ...agent, executable, available: Boolean(executable), running: [...running.values()].some(x => x.agent === agent.id) }; }))); }
 function json(res,status,body){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Access-Control-Allow-Origin':'http://127.0.0.1:43117','Access-Control-Allow-Headers':'content-type'});res.end(JSON.stringify(body,null,2));}
 async function body(req){let total=0;const chunks=[];for await(const chunk of req){total+=chunk.length;if(total>MAX_BODY_BYTES)throw new Error('Request body too large.');chunks.push(chunk);}if(!chunks.length)return{};const parsed=JSON.parse(Buffer.concat(chunks).toString('utf8'));if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw new Error('Request body must be a JSON object.');return parsed;}
 function chooseAgent(agents,role,requested){if(requested){const match=agents.find(a=>a.id===requested&&a.available&&a.roles.includes(role));if(match)return match;throw new Error(`Requested agent '${requested}' is not available for role '${role}'.`);}return agents.filter(a=>a.available&&a.roles.includes(role)).sort((a,b)=>b.priority-a.priority)[0]||null;}
