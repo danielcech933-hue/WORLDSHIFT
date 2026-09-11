@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Roblox Forge</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">AI ROBLOX DEVELOPMENT PLATFORM</div>
+        <h1>ROBLOX <span>FORGE</span></h1>
+      </div>
+      <div id="bridge" class="status">● CHECKING</div>
+    </header>
+
+    <section class="grid">
+      <article class="panel hero">
+        <div class="panel-title">PROJECT CONTROL</div>
+        <h2>Build. Inspect. Test. Iterate.</h2>
+        <p>Forge is the local control plane between an AI developer, Roblox Studio, GitHub and Rojo.</p>
+        <div class="actions">
+          <button id="ping">PING BRIDGE</button>
+          <button id="refresh">REFRESH STATE</button>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-title">CONNECTIONS</div>
+        <div class="row"><span>Bridge</span><strong id="bridgeState">—</strong></div>
+        <div class="row"><span>GitHub</span><strong id="githubState">—</strong></div>
+        <div class="row"><span>Roblox Studio</span><strong id="studioState">—</strong></div>
+        <div class="row"><span>Last heartbeat</span><strong id="heartbeat">—</strong></div>
+      </article>
+
+      <article class="panel wide">
+        <div class="panel-title">STUDIO SNAPSHOT</div>
+        <pre id="snapshot">Waiting for the Forge Studio plugin…</pre>
+      </article>
+
+      <article class="panel wide">
+        <div class="panel-title">COMMAND CONSOLE</div>
+        <div class="command-line">
+          <input id="command" placeholder='Try: {"type":"ping"}' />
+          <button id="send">EXECUTE</button>
+        </div>
+        <pre id="result">No command executed.</pre>
+      </article>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
