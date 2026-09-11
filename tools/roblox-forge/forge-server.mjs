@@ -12,6 +12,7 @@ const GITHUB_BRANCH = process.env.FORGE_GITHUB_BRANCH || 'main';
 const FORGE_SECRET = process.env.FORGE_SECRET || '';
 const STATE_DIR = path.join(ROOT, '.forge-runtime');
 const STATE_FILE = path.join(STATE_DIR, 'studio-state.json');
+const PUBLIC_DIR = path.join(ROOT, 'tools', 'roblox-forge', 'public');
 
 const state = {
   bridge: 'online',
@@ -42,7 +43,7 @@ function send(res, status, payload) {
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store',
-    'Access-Control-Allow-Origin': 'http://127.0.0.1:' + PORT,
+    'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'content-type,x-forge-secret'
   });
   res.end(body);
@@ -106,8 +107,7 @@ async function writeResult(result) {
   if (!GITHUB_TOKEN) return;
   try {
     await putGithubFile('.forge/outbox/last-result.json', payload, `forge: result ${result.id}`);
-  } catch (error) {
-    // If the file already exists, fetch its SHA and replace it.
+  } catch {
     try {
       const existing = await getGithubFile('.forge/outbox/last-result.json');
       await putGithubFile('.forge/outbox/last-result.json', payload, `forge: result ${result.id}`, existing.sha);
@@ -181,6 +181,21 @@ async function pollGithub() {
   }
 }
 
+async function serveStatic(urlPath, res) {
+  const routes = {
+    '/': ['index.html', 'text/html; charset=utf-8'],
+    '/index.html': ['index.html', 'text/html; charset=utf-8'],
+    '/app.js': ['app.js', 'text/javascript; charset=utf-8'],
+    '/style.css': ['style.css', 'text/css; charset=utf-8']
+  };
+  const entry = routes[urlPath];
+  if (!entry) return false;
+  const body = await fs.readFile(path.join(PUBLIC_DIR, entry[0]));
+  res.writeHead(200, { 'Content-Type': entry[1], 'Cache-Control': 'no-store' });
+  res.end(body);
+  return true;
+}
+
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'content-type,x-forge-secret' });
@@ -191,6 +206,8 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
 
   try {
+    if (req.method === 'GET' && await serveStatic(url.pathname, res)) return;
+
     if (req.method === 'GET' && url.pathname === '/api/health') {
       return send(res, 200, { ok: true, ...state });
     }
@@ -207,11 +224,6 @@ const server = http.createServer(async (req, res) => {
       const command = await readBody(req);
       const result = await executeCommand(command);
       return send(res, 200, { ok: true, result });
-    }
-
-    if (req.method === 'GET' && url.pathname === '/') {
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      return res.end(await fs.readFile(path.join(ROOT, 'tools/roblox-forge/public/index.html'), 'utf8'));
     }
 
     return send(res, 404, { ok: false, error: 'Not found' });
