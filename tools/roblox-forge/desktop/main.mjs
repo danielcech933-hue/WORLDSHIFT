@@ -1,10 +1,12 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 
 const APP_ID = 'com.robloxforge.desktop';
+const DESKTOP_DIR = path.dirname(fileURLToPath(import.meta.url));
 const CONFIG_FILE = () => path.join(app.getPath('userData'), 'forge-config.json');
 const children = new Map();
 let projectRoot = null;
@@ -27,22 +29,15 @@ async function findProjectInside(root, maxDepth = 3) {
   if (!root || maxDepth < 0) return null;
   if (await isValidProject(root)) return path.normalize(root);
   if (maxDepth === 0) return null;
-
   let entries;
-  try {
-    entries = await fs.readdir(root, { withFileTypes: true });
-  } catch {
-    return null;
-  }
-
+  try { entries = await fs.readdir(root, { withFileTypes: true }); } catch { return null; }
   const directories = entries
     .filter(entry => entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules' && entry.name !== 'dist')
     .sort((a, b) => {
-      const aScore = a.name.toLowerCase() === 'worldshift' ? 0 : 1;
-      const bScore = b.name.toLowerCase() === 'worldshift' ? 0 : 1;
-      return aScore - bScore || a.name.localeCompare(b.name);
+      const as = a.name.toLowerCase() === 'worldshift' ? 0 : 1;
+      const bs = b.name.toLowerCase() === 'worldshift' ? 0 : 1;
+      return as - bs || a.name.localeCompare(b.name);
     });
-
   for (const entry of directories) {
     const found = await findProjectInside(path.join(root, entry.name), maxDepth - 1);
     if (found) return found;
@@ -55,7 +50,6 @@ async function loadConfig() {
     const config = JSON.parse(await fs.readFile(CONFIG_FILE(), 'utf8'));
     projectRoot = await findProjectInside(config.projectRoot, 1);
   } catch {}
-
   if (!projectRoot) projectRoot = await findProject();
   if (projectRoot) await saveConfig();
 }
@@ -67,19 +61,18 @@ async function saveConfig() {
 
 async function findProject() {
   const home = os.homedir();
+  const oneDrive = process.env.OneDrive || process.env.OneDriveConsumer;
   const candidates = [
     path.join(home, 'Desktop'),
     path.join(home, 'OneDrive', 'Desktop'),
+    oneDrive && path.join(oneDrive, 'Desktop'),
     path.join(home, 'Documents'),
     path.join(home, 'OneDrive', 'Documents'),
-    path.join(home, 'Desktop', 'WORLDSHIFT'),
-    path.join(home, 'Documents', 'WORLDSHIFT'),
+    oneDrive && path.join(oneDrive, 'Documents'),
     path.resolve(process.cwd()),
-  ];
-
-  const unique = [...new Set(candidates.map(path.normalize))];
-  for (const candidate of unique) {
-    const found = await findProjectInside(candidate, 3);
+  ].filter(Boolean);
+  for (const candidate of [...new Set(candidates.map(path.normalize))]) {
+    const found = await findProjectInside(candidate, 4);
     if (found) return found;
   }
   return null;
@@ -108,7 +101,6 @@ function start(id) {
   if (children.has(id)) return { ok: true, running: true, alreadyRunning: true, pid: children.get(id).entry.pid };
   const def = definitions()[id];
   if (!def) throw new Error(`Neznámý proces: ${id}`);
-
   const child = spawn(def.command, def.args, {
     cwd: projectRoot,
     env: { ...process.env, FORCE_COLOR: '0' },
@@ -116,7 +108,6 @@ function start(id) {
     shell: false,
     stdio: ['pipe', 'pipe', 'pipe'],
   });
-
   const entry = { id, label: def.label, pid: child.pid ?? null, running: true, log: '' };
   children.set(id, { child, entry });
   const append = chunk => {
@@ -166,10 +157,8 @@ async function chooseProject() {
     properties: ['openDirectory'],
   });
   if (result.canceled || !result.filePaths?.[0]) return { ok: false, canceled: true, projectRoot };
-
   const selected = path.normalize(result.filePaths[0]);
-  const detected = await findProjectInside(selected, 4);
-
+  const detected = await findProjectInside(selected, 5);
   if (!detected) {
     await dialog.showMessageBox(mainWindow, {
       type: 'error',
@@ -179,7 +168,6 @@ async function chooseProject() {
     });
     return { ok: false, invalid: true, projectRoot };
   }
-
   stopAll();
   projectRoot = detected;
   await saveConfig();
@@ -208,7 +196,7 @@ async function installStudioPlugin() {
 async function studioHealth() {
   try {
     const response = await fetch('http://127.0.0.1:43117/api/health');
-    if (!response.ok) return { online: false, reason: `HTTP ${response.status}` };
+    if (!response.ok) return { online: false, connected: false, reason: `HTTP ${response.status}` };
     const health = await response.json();
     const heartbeat = health.lastStudioHeartbeat ? Date.parse(health.lastStudioHeartbeat) : 0;
     const connected = heartbeat > 0 && (Date.now() - heartbeat) < 8000;
@@ -222,9 +210,19 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1240, height: 820, minWidth: 1000, minHeight: 680,
     title: 'ROBLOX FORGE', backgroundColor: '#070a10', show: false,
-    webPreferences: { preload: path.join(app.getAppPath(), 'desktop', 'preload.mjs'), contextIsolation: true, nodeIntegration: false },
+    webPreferences: {
+      preload: path.join(DESKTOP_DIR, 'preload.mjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
   });
-  mainWindow.loadFile(path.join(app.getAppPath(), 'desktop', 'index.html'));
+  mainWindow.loadFile(path.join(DESKTOP_DIR, 'index.html'));
+  mainWindow.webContents.on('preload-error', (_event, preloadPath, error) => {
+    send('app-error', { message: `Preload error: ${preloadPath}: ${error.message}` });
+  });
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    send('app-error', { message: `Renderer ukončen: ${details.reason}` });
+  });
   mainWindow.once('ready-to-show', () => mainWindow.show());
 }
 
