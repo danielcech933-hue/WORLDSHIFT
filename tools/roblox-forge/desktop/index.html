@@ -9,15 +9,47 @@
 <body>
   <div class="app">
     <header class="topbar">
-      <div class="brand"><div class="mark">RF</div><div><div class="eyebrow">ROBLOX DEVELOPMENT PLATFORM</div><h1>ROBLOX FORGE</h1></div></div>
-      <div class="top-actions"><button id="startStack" class="primary">▶ SPUSTIT DEV STACK</button><button id="stopStack">■ ZASTAVIT VŠE</button></div>
+      <div class="brand">
+        <div class="mark">RF</div>
+        <div><div class="eyebrow">ROBLOX DEVELOPMENT PLATFORM</div><h1>ROBLOX FORGE</h1></div>
+      </div>
+      <div class="top-actions">
+        <button id="startStack" class="primary">▶ SPUSTIT DEV STACK</button>
+        <button id="stopStack">■ ZASTAVIT VŠE</button>
+      </div>
     </header>
     <main>
-      <section class="hero panel"><div><div class="eyebrow">ONE APP. ONE WORKSPACE.</div><h2>Všechno pro vývoj WORLDSHIFT na jednom místě.</h2><p>Forge schová CMD okna na pozadí a spravuje Forge Bridge, Rojo, Codex a Roblox Studio bridge z jediné aplikace.</p><div id="projectPath" class="project-path">Projekt není vybrán.</div></div><button id="openFolder">VYBRAT PROJEKT</button></section>
+      <section class="hero panel">
+        <div>
+          <div class="eyebrow">ONE APP. ONE WORKSPACE.</div>
+          <h2>Všechno pro vývoj WORLDSHIFT na jednom místě.</h2>
+          <p>Forge řídí vývojové procesy na pozadí, takže nemusíš mít otevřených několik CMD oken.</p>
+          <div class="project-row">
+            <div id="projectBadge" class="badge">NO PROJECT</div>
+            <div id="projectPath" class="project-path">Projekt se automaticky hledá…</div>
+          </div>
+        </div>
+        <div class="project-actions">
+          <button id="openFolder">VYBRAT PROJEKT</button>
+          <button id="resetProject" class="ghost">RESET</button>
+        </div>
+      </section>
+
       <section id="cards" class="cards"></section>
-      <section class="panel logs"><div class="section-head"><div><div class="eyebrow">LIVE OUTPUT</div><h3>Developer Console</h3></div><select id="logSelect"></select></div><pre id="log">Vyber proces pro zobrazení výstupu.</pre><div class="input-row"><input id="input" placeholder="Poslat vstup vybranému procesu…"/><button id="send">ODESLAT</button></div></section>
+
+      <section class="panel logs">
+        <div class="section-head">
+          <div><div class="eyebrow">LIVE OUTPUT</div><h3>Developer Console</h3></div>
+          <select id="logSelect"></select>
+        </div>
+        <pre id="log">Vyber proces pro zobrazení výstupu.</pre>
+        <div class="input-row">
+          <input id="input" placeholder="Poslat vstup vybranému procesu…"/>
+          <button id="send">ODESLAT</button>
+        </div>
+      </section>
     </main>
-    <footer><span>ROBLOX FORGE 0.3</span><span id="status">READY</span></footer>
+    <footer><span>ROBLOX FORGE</span><span id="status">STARTING…</span></footer>
   </div>
   <script src="renderer.js"></script>
 </body>
