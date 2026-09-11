@@ -64,6 +64,20 @@ function chooseAgent(agents, role, requested) {
   return agents.filter(a => a.available && a.roles.includes(role)).sort((a, b) => b.priority - a.priority)[0] || null;
 }
 
+function quoteWindowsArg(value) {
+  const text = String(value);
+  if (!/[\s"&|<>^]/.test(text)) return text;
+  return `"${text.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/g, '$1$1')}"`;
+}
+
+function spawnAgent(executable, args) {
+  if (process.platform !== 'win32' || !/\.(cmd|bat)$/i.test(executable)) {
+    return spawn(executable, args, { cwd: ROOT, env: { ...process.env }, windowsHide: true, shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
+  }
+  const commandLine = [executable, ...args].map(quoteWindowsArg).join(' ');
+  return spawn('cmd.exe', ['/d', '/s', '/c', commandLine], { cwd: ROOT, env: { ...process.env }, windowsHide: true, shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
+}
+
 function buildArgs(agent, prompt, role, policy) {
   const roleHint = `You are the ${role} agent inside ROBLOX FORGE. ${prompt}`;
   const args = [...(agent.run?.argsPrefix || [])];
@@ -88,7 +102,7 @@ async function runAgent({ role = 'coder', prompt, agentId, policy = DEFAULT_POLI
 
   const id = `${agent.id}-${Date.now()}`;
   const args = buildArgs(agent, prompt, role, policy);
-  const child = spawn(agent.command, args, { cwd: ROOT, env: { ...process.env }, windowsHide: true, shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawnAgent(agent.executable, args);
   running.set(id, { id, agent: agent.id, role, pid: child.pid || null, startedAt: new Date().toISOString(), child });
 
   let stdout = '';
@@ -133,6 +147,11 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, HOST, () => {
-  console.log(`[ROBLOX FORGE] Agent Orchestrator listening on http://${HOST}:${PORT}`);
+readRegistry().then(() => {
+  server.listen(PORT, HOST, () => {
+    console.log(`[ROBLOX FORGE] Agent Orchestrator listening on http://${HOST}:${PORT}`);
+  });
+}).catch(error => {
+  console.error(`[ROBLOX FORGE] Agent Orchestrator startup failed: ${error.message}`);
+  process.exitCode = 1;
 });
