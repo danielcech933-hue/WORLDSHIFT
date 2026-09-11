@@ -1,6 +1,6 @@
 {
   "name": "roblox-forge",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "private": true,
   "description": "ROBLOX FORGE desktop development platform and local bridge.",
   "type": "module",
@@ -22,15 +22,19 @@
     "productName": "ROBLOX FORGE",
     "directories": { "output": "dist" },
     "files": ["desktop/**/*", "forge-server.mjs", "public/**/*", "package.json"],
+    "asar": true,
+    "compression": "maximum",
     "win": {
       "target": ["nsis", "portable"],
-      "artifactName": "ROBLOX-FORGE-${version}-${arch}.${ext}"
+      "artifactName": "ROBLOX-FORGE-${version}-${arch}.${ext}",
+      "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true
     }
   }
 }
