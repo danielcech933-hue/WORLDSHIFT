@@ -1,13 +1,36 @@
 {
   "name": "roblox-forge",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
-  "description": "Local Roblox development bridge for AI-assisted project inspection and controlled Studio automation.",
+  "description": "ROBLOX FORGE desktop development platform and local bridge.",
   "type": "module",
+  "main": "desktop/main.mjs",
   "scripts": {
-    "start": "node forge-server.mjs"
+    "start": "node forge-server.mjs",
+    "desktop": "electron .",
+    "build:win": "electron-builder --win nsis portable"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.robloxforge.desktop",
+    "productName": "ROBLOX FORGE",
+    "directories": { "output": "dist" },
+    "files": ["desktop/**/*", "forge-server.mjs", "public/**/*", "package.json"],
+    "win": {
+      "target": ["nsis", "portable"],
+      "artifactName": "ROBLOX-FORGE-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }
