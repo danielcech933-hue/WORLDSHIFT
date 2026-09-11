@@ -23,11 +23,39 @@ async function isValidProject(root) {
     && await requirePath(root, 'tools', 'roblox-forge', 'forge-server.mjs');
 }
 
+async function findProjectInside(root, maxDepth = 3) {
+  if (!root || maxDepth < 0) return null;
+  if (await isValidProject(root)) return path.normalize(root);
+  if (maxDepth === 0) return null;
+
+  let entries;
+  try {
+    entries = await fs.readdir(root, { withFileTypes: true });
+  } catch {
+    return null;
+  }
+
+  const directories = entries
+    .filter(entry => entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'node_modules' && entry.name !== 'dist')
+    .sort((a, b) => {
+      const aScore = a.name.toLowerCase() === 'worldshift' ? 0 : 1;
+      const bScore = b.name.toLowerCase() === 'worldshift' ? 0 : 1;
+      return aScore - bScore || a.name.localeCompare(b.name);
+    });
+
+  for (const entry of directories) {
+    const found = await findProjectInside(path.join(root, entry.name), maxDepth - 1);
+    if (found) return found;
+  }
+  return null;
+}
+
 async function loadConfig() {
   try {
     const config = JSON.parse(await fs.readFile(CONFIG_FILE(), 'utf8'));
-    if (await isValidProject(config.projectRoot)) projectRoot = config.projectRoot;
+    projectRoot = await findProjectInside(config.projectRoot, 1);
   } catch {}
+
   if (!projectRoot) projectRoot = await findProject();
   if (projectRoot) await saveConfig();
 }
@@ -40,13 +68,20 @@ async function saveConfig() {
 async function findProject() {
   const home = os.homedir();
   const candidates = [
-    path.join(home, 'Desktop', 'WORLDSHIFT', 'WORLDSHIFT'),
+    path.join(home, 'Desktop'),
+    path.join(home, 'OneDrive', 'Desktop'),
+    path.join(home, 'Documents'),
+    path.join(home, 'OneDrive', 'Documents'),
     path.join(home, 'Desktop', 'WORLDSHIFT'),
-    path.join(home, 'Documents', 'WORLDSHIFT', 'WORLDSHIFT'),
     path.join(home, 'Documents', 'WORLDSHIFT'),
     path.resolve(process.cwd()),
   ];
-  for (const candidate of candidates) if (await isValidProject(candidate)) return candidate;
+
+  const unique = [...new Set(candidates.map(path.normalize))];
+  for (const candidate of unique) {
+    const found = await findProjectInside(candidate, 3);
+    if (found) return found;
+  }
   return null;
 }
 
@@ -125,26 +160,28 @@ function status() {
 
 async function chooseProject() {
   const result = await dialog.showOpenDialog(mainWindow, {
-    title: 'Vyber kořen projektu WORLDSHIFT',
+    title: 'Vyber složku projektu WORLDSHIFT',
     defaultPath: projectRoot || path.join(os.homedir(), 'Desktop'),
-    buttonLabel: 'Vybrat WORLDSHIFT',
+    buttonLabel: 'PŘIPOJIT PROJEKT',
     properties: ['openDirectory'],
   });
   if (result.canceled || !result.filePaths?.[0]) return { ok: false, canceled: true, projectRoot };
 
   const selected = path.normalize(result.filePaths[0]);
-  if (!(await isValidProject(selected))) {
+  const detected = await findProjectInside(selected, 4);
+
+  if (!detected) {
     await dialog.showMessageBox(mainWindow, {
       type: 'error',
-      title: 'ROBLOX FORGE — neplatný projekt',
-      message: 'Tahle složka nevypadá jako WORLDSHIFT projekt.',
-      detail: 'Vyber složku, která obsahuje default.project.json, src a tools\\roblox-forge\\forge-server.mjs.',
+      title: 'ROBLOX FORGE — projekt nenalezen',
+      message: 'V této složce jsem nenašel platný WORLDSHIFT projekt.',
+      detail: 'Vyber složku, ve které je default.project.json. Forge umí najít WORLDSHIFT i uvnitř vybrané složky.',
     });
     return { ok: false, invalid: true, projectRoot };
   }
 
   stopAll();
-  projectRoot = selected;
+  projectRoot = detected;
   await saveConfig();
   return { ok: true, projectRoot };
 }
