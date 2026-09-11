@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="cs">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,12 +10,12 @@
   <div class="app">
     <header class="topbar">
       <div class="brand"><div class="mark">RF</div><div><div class="eyebrow">ROBLOX DEVELOPMENT PLATFORM</div><h1>ROBLOX FORGE</h1></div></div>
-      <div class="top-actions"><button id="startStack" class="primary">▶ START DEV STACK</button><button id="stopStack">■ STOP ALL</button></div>
+      <div class="top-actions"><button id="startStack" class="primary">▶ SPUSTIT DEV STACK</button><button id="stopStack">■ ZASTAVIT VŠE</button></div>
     </header>
     <main>
-      <section class="hero panel"><div><div class="eyebrow">ONE APP. ONE WORKSPACE.</div><h2>Everything you need to build WORLDSHIFT.</h2><p>Forge manages the development tools in the background so you don't need a wall of CMD windows.</p></div><button id="openFolder">OPEN PROJECT</button></section>
+      <section class="hero panel"><div><div class="eyebrow">ONE APP. ONE WORKSPACE.</div><h2>Všechno pro vývoj WORLDSHIFT na jednom místě.</h2><p>Forge schová CMD okna na pozadí a spravuje Forge Bridge, Rojo, Codex a Roblox Studio bridge z jediné aplikace.</p><div id="projectPath" class="project-path">Projekt není vybrán.</div></div><button id="openFolder">VYBRAT PROJEKT</button></section>
       <section id="cards" class="cards"></section>
-      <section class="panel logs"><div class="section-head"><div><div class="eyebrow">LIVE OUTPUT</div><h3>Developer Console</h3></div><select id="logSelect"></select></div><pre id="log">Select a process to view its output.</pre><div class="input-row"><input id="input" placeholder="Send input to the selected process…"/><button id="send">SEND</button></div></section>
+      <section class="panel logs"><div class="section-head"><div><div class="eyebrow">LIVE OUTPUT</div><h3>Developer Console</h3></div><select id="logSelect"></select></div><pre id="log">Vyber proces pro zobrazení výstupu.</pre><div class="input-row"><input id="input" placeholder="Poslat vstup vybranému procesu…"/><button id="send">ODESLAT</button></div></section>
     </main>
     <footer><span>ROBLOX FORGE 0.3</span><span id="status">READY</span></footer>
   </div>
