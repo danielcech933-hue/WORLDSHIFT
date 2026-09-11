@@ -21,7 +21,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\tools\roblox-forge\install.ps1
 ```
 
-The installer copies the Forge Studio plugin into Roblox Studio's local Plugins folder and checks that Node.js is available. Roblox documents local plugins and the local Plugins directory in the Studio plugin documentation. urlRoblox Studio plugin documentationhttps://create.roblox.com/docs/studio/plugins
+The installer copies the Forge Studio plugin into Roblox Studio's local Plugins folder and checks that Node.js is available. Roblox documents local plugins and the local Plugins directory in its Studio plugin documentation.
 
 Then restart Roblox Studio once so the local plugin loads cleanly.
 
