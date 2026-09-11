@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld('forge', {
   project: () => ipcRenderer.invoke('project-get'),
   chooseProject: () => ipcRenderer.invoke('project-choose'),
   resetProject: () => ipcRenderer.invoke('project-reset'),
+  studioInstall: () => ipcRenderer.invoke('studio-install'),
+  studioHealth: () => ipcRenderer.invoke('studio-health'),
   start: id => ipcRenderer.invoke('process-start', id),
   stop: id => ipcRenderer.invoke('process-stop', id),
   startStack: () => ipcRenderer.invoke('stack-start'),
