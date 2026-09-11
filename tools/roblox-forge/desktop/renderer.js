@@ -1,104 +1,19 @@
-const state = new Map();
-let selected = 'forge';
-let busy = false;
-
-const labels = { forge: 'Forge Bridge', rojo: 'Rojo', codex: 'Codex CLI', gemini: 'Gemini CLI · FREE AGENT' };
-const cards = document.getElementById('cards');
-const log = document.getElementById('log');
-const select = document.getElementById('logSelect');
-const status = document.getElementById('status');
-const projectPath = document.getElementById('projectPath');
-const projectBadge = document.getElementById('projectBadge');
-const chooseButton = document.getElementById('openFolder');
-const startButton = document.getElementById('startStack');
-const stopButton = document.getElementById('stopStack');
-const resetButton = document.getElementById('resetProject');
-const installStudioButton = document.getElementById('installStudio');
-const studioStatus = document.getElementById('studioStatus');
-const studioDetail = document.getElementById('studioDetail');
-const sendButton = document.getElementById('send');
-const input = document.getElementById('input');
-
-function setStatus(text, kind = '') { status.textContent = text; status.dataset.kind = kind; }
-function escapeHtml(value) { return String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char])); }
-
-function render(items) {
-  items.forEach(item => state.set(item.id, item));
-  cards.innerHTML = items.length ? items.map(item => `
-    <article class="process panel ${item.running ? 'running' : ''}">
-      <div class="process-top"><div><div class="eyebrow">${item.id === 'gemini' ? 'AI AGENT' : 'PROCESS'}</div><h3>${escapeHtml(item.label)}</h3></div><span class="dot"></span></div>
-      <div class="meta">${item.running ? `RUNNING · PID ${item.pid ?? '—'}` : 'STOPPED'}</div>
-      <div class="buttons"><button data-start="${item.id}" ${item.running ? 'disabled' : ''}>START</button><button data-stop="${item.id}" ${item.running ? '' : 'disabled'}>STOP</button><button data-view="${item.id}">LOG</button></div>
-    </article>`).join('') : '<div class="empty panel">Vyber projekt WORLDSHIFT a Forge načte jeho nástroje.</div>';
-  select.innerHTML = items.map(item => `<option value="${item.id}">${escapeHtml(item.label)}</option>`).join('');
-  if (items.some(item => item.id === selected)) select.value = selected;
-  else if (items[0]) selected = items[0].id;
-  showLog(selected);
-}
-
-function showLog(id) { selected = id; if (select.options.length) select.value = id; log.textContent = state.get(id)?.log || 'Žádný výstup.'; log.scrollTop = log.scrollHeight; }
-
-async function refresh() {
-  try {
-    const [items, project, info, studio] = await Promise.all([window.forge.status(), window.forge.project(), window.forge.info(), window.forge.studioHealth()]);
-    render(items);
-    const pathValue = project.projectRoot;
-    projectPath.textContent = pathValue || 'Projekt není vybrán.';
-    projectBadge.textContent = pathValue ? 'PROJECT READY' : 'NO PROJECT';
-    projectBadge.dataset.kind = pathValue ? 'ok' : 'warn';
-    if (studio.connected) {
-      studioStatus.textContent = 'Studio Bridge je připojený';
-      studioDetail.textContent = `Heartbeat: ${studio.heartbeat || 'právě teď'}`;
-      studioDetail.dataset.kind = 'ok';
-    } else if (studio.online) {
-      studioStatus.textContent = 'Forge běží, Studio Bridge čeká';
-      studioDetail.textContent = 'Plugin není připojený nebo ještě neposlal heartbeat.';
-      studioDetail.dataset.kind = 'warn';
-    } else {
-      studioStatus.textContent = 'Studio Bridge není připojený';
-      studioDetail.textContent = 'Spusť Dev Stack a potom nainstaluj Studio Bridge.';
-      studioDetail.dataset.kind = 'warn';
-    }
-    if (!busy) setStatus(pathValue ? `READY · v${info.version}` : 'VYBER PROJEKT', pathValue ? 'ok' : 'warn');
-  } catch (error) { setStatus(`CHYBA: ${error.message}`, 'error'); }
-}
-
-async function chooseProject() {
-  if (busy) return;
-  busy = true; chooseButton.disabled = true; setStatus('OTEVÍRÁM VÝBĚR PROJEKTU…');
-  try {
-    const result = await window.forge.chooseProject();
-    if (result.ok) setStatus('PROJEKT PŘIPOJEN', 'ok');
-    else if (result.invalid) setStatus('NEPLATNÁ SLOŽKA', 'error');
-    else if (result.canceled) setStatus('VÝBĚR ZRUŠEN', 'warn');
-  } catch (error) { setStatus(`CHYBA: ${error.message}`, 'error'); }
-  finally { busy = false; chooseButton.disabled = false; await refresh(); }
-}
-
-async function runAction(action, message) {
-  if (busy) return;
-  busy = true; setStatus(message);
-  try { await action(); } catch (error) { setStatus(`CHYBA: ${error.message}`, 'error'); }
-  finally { busy = false; await refresh(); }
-}
-
-cards.addEventListener('click', async event => {
-  const start = event.target.dataset.start, stop = event.target.dataset.stop, view = event.target.dataset.view;
-  if (view) showLog(view);
-  if (start) await runAction(() => window.forge.start(start), `STARTING ${(labels[start] || start).toUpperCase()}…`);
-  if (stop) await runAction(() => window.forge.stop(stop), `STOPPING ${(labels[stop] || stop).toUpperCase()}…`);
-});
-startButton.onclick = () => runAction(() => window.forge.startStack(), 'STARTING DEV STACK…');
-stopButton.onclick = () => runAction(() => window.forge.stopStack(), 'STOPPING ALL…');
-chooseButton.onclick = chooseProject;
-resetButton.onclick = async () => { if (confirm('Opravdu odebrat uložený projekt z ROBLOX FORGE?')) await runAction(() => window.forge.resetProject(), 'RESETUJI PROJEKT…'); };
-installStudioButton.onclick = () => runAction(async () => { const result = await window.forge.studioInstall(); studioDetail.textContent = `Plugin nainstalován: ${result.target}`; }, 'INSTALUJI STUDIO BRIDGE…');
-sendButton.onclick = async () => { const value = input.value; if (!value) return; try { await window.forge.input(selected, value.endsWith('\n') ? value : `${value}\n`); input.value = ''; } catch (error) { setStatus(`CHYBA: ${error.message}`, 'error'); } };
-input.addEventListener('keydown', event => { if (event.key === 'Enter') sendButton.click(); });
-select.onchange = () => showLog(select.value);
-window.forge.onLog(payload => { const item = state.get(payload.id) || { id: payload.id, label: labels[payload.id] || payload.id, running: true, log: '' }; item.log = `${item.log || ''}${payload.text}`.slice(-50000); item.running = true; state.set(payload.id, item); if (payload.id === selected) showLog(selected); });
-window.forge.onExit(payload => { setStatus(`${labels[payload.id] || payload.id} stopped`, payload.error ? 'error' : 'warn'); refresh(); });
-window.forge.onError(payload => setStatus(`CHYBA APLIKACE: ${payload.message}`, 'error'));
-
-refresh();
-setInterval(refresh, 2500);
+const state=new Map();let selected='forge',busy=false,workspace={memory:'',tasks:[],decisions:[]};
+const $=id=>document.getElementById(id);const cards=$('cards'),log=$('log'),select=$('logSelect'),status=$('status'),projectPath=$('projectPath'),projectBadge=$('projectBadge');
+const labels={forge:'Forge Bridge',rojo:'Rojo',agents:'AI Orchestrator'};
+function setStatus(text,kind=''){status.textContent=text;status.dataset.kind=kind}function esc(v){return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function renderProcesses(items){items.forEach(x=>state.set(x.id,x));cards.innerHTML=items.length?items.map(x=>`<article class="process ${x.running?'running':''}"><div class="process-top"><h3>${esc(x.label)}</h3><span class="dot"></span></div><div class="meta">${x.running?`RUNNING · PID ${x.pid??'—'}`:'STOPPED'}</div><div class="buttons"><button data-start="${x.id}" ${x.running?'disabled':''}>START</button><button data-stop="${x.id}" ${x.running?'':'disabled'}>STOP</button><button data-view="${x.id}">LOG</button></div></article>`).join(''):'<div class="empty">Vyber projekt WORLDSHIFT.</div>';select.innerHTML=items.map(x=>`<option value="${x.id}">${esc(x.label)}</option>`).join('');if(items.some(x=>x.id===selected))select.value=selected;else if(items[0])selected=items[0].id;showLog(selected)}
+function showLog(id){selected=id;if(select.options.length)select.value=id;log.textContent=state.get(id)?.log||'Žádný výstup.';log.scrollTop=log.scrollHeight}
+function renderHealth(d){const root=d?.diagnostics;if(!root){$('healthGrid').innerHTML='<div class="health-item"><strong>OFFLINE</strong>Forge diagnostics nejsou dostupné.</div>';return}const t=root.tools||{};const items=[['Forge',root.forge?.version||'—'],['Project',root.project?.defaultProject?'READY':'MISSING'],['Node',t.node?'OK':'MISSING'],['Rojo',t.rojo?'OK':'MISSING'],['Git',t.git?'OK':'MISSING'],['Studio',root.studio?.connected?'CONNECTED':'WAITING']];$('healthGrid').innerHTML=items.map(([a,b])=>`<div class="health-item"><strong>${esc(a)}</strong>${esc(b)}</div>`).join('')}
+async function refresh(){try{const [items,project,info,studio,diag]=await Promise.all([window.forge.status(),window.forge.project(),window.forge.info(),window.forge.studioHealth(),window.forge.diagnostics()]);renderProcesses(items);const p=project.projectRoot;projectPath.textContent=p||'Projekt není vybrán.';projectBadge.textContent=p?'PROJECT READY':'NO PROJECT';projectBadge.dataset.kind=p?'ok':'warn';if(studio.connected){$('studioStatus').textContent='Studio Bridge je připojený';$('studioDetail').textContent=`Heartbeat: ${studio.heartbeat||'právě teď'}`;$('studioDetail').dataset.kind='ok'}else{$('studioStatus').textContent=studio.online?'Forge běží, Studio čeká':'Studio Bridge není připojený';$('studioDetail').textContent=studio.online?'Plugin není připojený nebo ještě neposlal heartbeat.':'Spusť Dev Stack.';$('studioDetail').dataset.kind='warn'}renderHealth(diag);if(!busy)setStatus(p?`READY · v${info.version}`:'VYBER PROJEKT',p?'ok':'warn')}catch(e){setStatus(`CHYBA: ${e.message}`,'error')}}
+async function action(fn,msg){if(busy)return;busy=true;setStatus(msg);try{await fn()}catch(e){setStatus(`CHYBA: ${e.message}`,'error')}finally{busy=false;await refresh()}}
+$('openFolder').onclick=()=>action(async()=>{const r=await window.forge.chooseProject();if(!r.ok&&r.invalid)throw new Error('Neplatná složka projektu.');},'VYBÍRÁM PROJEKT…');$('resetProject').onclick=()=>{if(confirm('Opravdu odebrat uložený projekt?'))action(()=>window.forge.resetProject(),'RESETUJI…')};$('startStack').onclick=()=>action(()=>window.forge.startStack(),'STARTUJI DEV STACK…');$('stopStack').onclick=()=>action(()=>window.forge.stopStack(),'ZASTAVUJI VŠE…');$('installStudio').onclick=()=>action(()=>window.forge.studioInstall(),'INSTALUJI STUDIO BRIDGE…');$('refreshHealth').onclick=refresh;
+cards.onclick=async e=>{const a=e.target.dataset;if(a.view)showLog(a.view);if(a.start)await action(()=>window.forge.start(a.start),`START ${a.start.toUpperCase()}…`);if(a.stop)await action(()=>window.forge.stop(a.stop),`STOP ${a.stop.toUpperCase()}…`)};
+select.onchange=()=>showLog(select.value);$('send').onclick=async()=>{const v=$('input').value;if(!v)return;try{await window.forge.input(selected,v.endsWith('\n')?v:v+'\n');$('input').value=''}catch(e){setStatus(`CHYBA: ${e.message}`,'error')}};$('input').onkeydown=e=>{if(e.key==='Enter')$('send').click()};
+async function loadAgents(){const result=await window.forge.agentsList();const list=result.agents||[];$('agentSelect').innerHTML='<option value="">AUTO — nejlepší dostupný</option>'+list.map(a=>`<option value="${esc(a.id)}" ${a.available?'':'disabled'}>${esc(a.name)}${a.available?'':' · nedostupný'}</option>`).join('');const available=list.filter(a=>a.available).length;$('agentStatus').textContent=available?`${available} AGENT${available>1?'I':''} READY`:'NO AGENTS';$('agentStatus').dataset.kind=available?'ok':'warn'}
+$('agentRole').onchange=loadAgents;$('runAgent').onclick=async()=>{const prompt=$('agentPrompt').value.trim();if(!prompt){setStatus('Zadej AI úkol.','warn');return}const payload={role:$('agentRole').value,agentId:$('agentSelect').value||undefined,prompt};$('runAgent').disabled=true;setStatus('AI PRACUJE…');$('agentResult').textContent='Spouštím supervised agent run…';try{const r=await window.forge.agentRun(payload);$('agentResult').textContent=JSON.stringify(r,null,2);setStatus(r.ok?'AI ÚKOL HOTOV':'AI ÚKOL SKONČIL S CHYBOU',r.ok?'ok':'error')}catch(e){$('agentResult').textContent=e.stack||e.message;setStatus(`AI CHYBA: ${e.message}`,'error')}finally{$('runAgent').disabled=false}};$('clearAgent').onclick=()=>{$('agentResult').textContent='AI výsledek se zobrazí zde.'};
+async function loadWorkspace(){workspace=await window.forge.workspaceGet();$('memory').value=workspace.memory||'';renderTasks()}
+function renderTasks(){$('tasks').innerHTML=(workspace.tasks||[]).map((t,i)=>`<div class="task ${t.done?'done':''}"><input type="checkbox" data-task="${i}" ${t.done?'checked':''}/><span>${esc(t.text)}</span><button data-remove="${i}">×</button></div>`).join('')||'<div class="meta">Žádné úkoly.</div>'}
+$('addTask').onclick=()=>{const text=$('taskInput').value.trim();if(!text)return;workspace.tasks=[...(workspace.tasks||[]),{text,done:false,createdAt:new Date().toISOString()}];$('taskInput').value='';renderTasks();window.forge.workspaceSave(workspace)};$('taskInput').onkeydown=e=>{if(e.key==='Enter')$('addTask').click()};$('tasks').onclick=e=>{const i=e.target.dataset.task??e.target.dataset.remove;if(i===undefined)return;if(e.target.dataset.task!==undefined)workspace.tasks[i].done=e.target.checked;else workspace.tasks.splice(Number(i),1);renderTasks();window.forge.workspaceSave(workspace)};$('saveWorkspace').onclick=async()=>{workspace.memory=$('memory').value;await window.forge.workspaceSave(workspace);setStatus('WORKSPACE ULOŽEN','ok')};
+window.forge.onLog(p=>{const item=state.get(p.id)||{id:p.id,label:labels[p.id]||p.id,running:true,log:''};item.log=(item.log||'')+p.text;item.log=item.log.slice(-50000);item.running=true;state.set(p.id,item);if(p.id===selected)showLog(selected)});window.forge.onExit(p=>{setStatus(`${labels[p.id]||p.id} stopped`,p.error?'error':'warn');refresh()});window.forge.onError(p=>setStatus(`CHYBA APLIKACE: ${p.message}`,'error'));
+(async()=>{await loadWorkspace();await loadAgents();await refresh();setInterval(refresh,2500)})();
