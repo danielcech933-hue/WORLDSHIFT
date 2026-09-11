@@ -10,6 +10,7 @@
     "desktop": "electron .",
     "mcp": "node mcp-server.mjs",
     "agents": "node agents/orchestrator.mjs",
+    "verify": "node smoke-test.mjs",
     "desktop:dev": "electron .",
     "build:win": "electron-builder --win nsis portable"
   },
@@ -28,7 +29,7 @@
     "appId": "com.robloxforge.desktop",
     "productName": "ROBLOX FORGE",
     "directories": { "output": "dist" },
-    "files": ["desktop/**/*", "forge-server.mjs", "mcp-server.mjs", "agents/**/*", "plugins/**/*", "public/**/*", "package.json", ".opencode/**/*", ".gemini/**/*"],
+    "files": ["desktop/**/*", "forge-server.mjs", "mcp-server.mjs", "agents/**/*", "plugins/**/*", "public/**/*", "smoke-test.mjs", "package.json", ".opencode/**/*", ".gemini/**/*"],
     "asar": true,
     "compression": "maximum",
     "win": {
