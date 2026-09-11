@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "defaultPolicy": "supervised",
+  "agents": [
+    {
+      "id": "opencode",
+      "name": "OpenCode",
+      "kind": "cli",
+      "command": "opencode",
+      "healthArgs": ["--version"],
+      "run": {"argsPrefix": ["run", "--format", "json"]},
+      "priority": 100,
+      "roles": ["architect", "coder", "reviewer", "researcher", "tester"]
+    },
+    {
+      "id": "claude-code",
+      "name": "Claude Code",
+      "kind": "cli",
+      "command": "claude",
+      "healthArgs": ["--version"],
+      "run": {"argsPrefix": ["-p", "--output-format", "json"]},
+      "priority": 95,
+      "roles": ["architect", "coder", "reviewer", "researcher"]
+    },
+    {
+      "id": "codex",
+      "name": "Codex CLI",
+      "kind": "cli",
+      "command": "codex",
+      "healthArgs": ["--version"],
+      "run": {"argsPrefix": ["exec"]},
+      "priority": 80,
+      "roles": ["coder", "reviewer", "tester"]
+    }
+  ],
+  "roles": {
+    "architect": "Design the solution before implementation. Preserve existing architecture and avoid duplicate systems.",
+    "coder": "Implement the approved plan in the connected project. Prefer small, testable changes.",
+    "reviewer": "Review the current implementation for correctness, regressions, security and maintainability. Do not rewrite unnecessarily.",
+    "researcher": "Research current official documentation and compare viable implementation approaches. Return evidence and recommendations.",
+    "tester": "Run the available tests and diagnostics, reproduce failures and report concrete fixes."
+  }
+}
