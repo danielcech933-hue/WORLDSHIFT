@@ -19,20 +19,58 @@ local function createRemoteFolder()
 	local remotes = ReplicatedStorage:FindFirstChild("Remotes") or Instance.new("Folder")
 	remotes.Name = "Remotes"
 	remotes.Parent = ReplicatedStorage
+
+	local selectWorld = remotes:FindFirstChild("SelectStartingWorld")
+	if not selectWorld then
+		selectWorld = Instance.new("RemoteEvent")
+		selectWorld.Name = "SelectStartingWorld"
+		selectWorld.Parent = remotes
+	end
+	return selectWorld
 end
 
 local function setupPlayer(player: Player)
 	player:SetAttribute("WorldShiftReady", true)
-	player:SetAttribute("Reality", Config.StartingReality)
-	player:SetAttribute("Location", Config.StartingLocation)
+	player:SetAttribute("Reality", "Unchosen")
+	player:SetAttribute("Location", "Between Worlds")
+	player:SetAttribute("StartingWorldChosen", false)
 end
 
 createRuntimeFolders()
-createRemoteFolder()
+local selectWorld = createRemoteFolder()
+
+selectWorld.OnServerEvent:Connect(function(player: Player, reality: string)
+	if player:GetAttribute("StartingWorldChosen") then
+		return
+	end
+
+	if reality ~= "Anime" and reality ~= "Movie" then
+		return
+	end
+
+	player:SetAttribute("Reality", reality)
+	player:SetAttribute("StartingWorldChosen", true)
+
+	if reality == "Anime" then
+		player:SetAttribute("Location", "Hoshikawa")
+	else
+		player:SetAttribute("Location", "Metrovale")
+	end
+
+	local character = player.Character
+	if character then
+		local target = reality == "Anime"
+			and CFrame.new(0, 5, 8)
+			or CFrame.new(150, 5, 8)
+		character:PivotTo(target)
+	end
+
+	print(string.format("[WORLDSHIFT] %s chose %s Reality", player.Name, reality))
+end)
 
 Players.PlayerAdded:Connect(setupPlayer)
 for _, player in Players:GetPlayers() do
 	setupPlayer(player)
 end
 
-print(string.format("[WORLDSHIFT] Server ready — v%s — %s / %s", Config.Version, Config.StartingReality, Config.StartingLocation))
+print(string.format("[WORLDSHIFT] Server ready — v%s", Config.Version))
