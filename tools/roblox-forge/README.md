@@ -1,17 +1,17 @@
-# ROBLOX FORGE 1.0
+# ROBLOX FORGE 1.2
 
-ROBLOX FORGE is the local Windows development control plane for WORLDSHIFT. It replaces a wall of CMD windows with one desktop application.
+ROBLOX FORGE is the local Windows development control plane for WORLDSHIFT. It combines the desktop workspace, Forge bridge, Rojo sync, Studio bridge, MCP gateway and an agent-agnostic AI layer.
 
 ## What the desktop app manages
 
 - Forge Bridge on `127.0.0.1:43117`
 - Rojo project sync
-- Codex CLI (start/stop/log from the app)
-- Roblox Studio bridge plugin
-- project selection and persistent project memory
-- live process logs
-- start/stop development stack
-- Studio bridge installation and heartbeat status
+- Roblox Studio bridge plugin and heartbeat
+- project discovery and persistent project selection
+- live process logs and development-stack controls
+- MCP gateway for project/Studio operations
+- agent orchestration with OpenCode, Claude Code and Codex when installed
+- supervised agent roles: architect, coder, reviewer, researcher and tester
 - GitHub command inbox/outbox through the Forge server
 
 ## First setup
@@ -28,21 +28,21 @@ git pull
 .\tools\roblox-forge\build-windows.bat
 ```
 
-3. In `tools/roblox-forge/dist/` use either:
-   - `ROBLOX-FORGE-1.0.0-x64.exe` for the portable version, or
-   - the generated NSIS setup executable for an installed desktop shortcut.
+3. In `tools/roblox-forge/dist/` use the generated portable EXE or NSIS installer.
 
 ## Daily workflow
 
 1. Open **ROBLOX FORGE**.
-2. Forge automatically looks for `Desktop\WORLDSHIFT\WORLDSHIFT` and remembers the last valid project.
-3. If needed, click **VYBRAT PROJEKT** and select the WORLDSHIFT root.
-4. Click **⚡ INSTALOVAT STUDIO BRIDGE** once after a fresh machine/plugin reset.
-5. Click **▶ SPUSTIT DEV STACK**.
-6. Work in Roblox Studio. Rojo and Forge run in the background; their output appears in Developer Console.
-7. Use the process cards to start/stop individual tools when needed.
+2. Forge automatically searches common Desktop/Documents locations for a valid WORLDSHIFT project and remembers the last valid project.
+3. If needed, use **VYBRAT PROJEKT** and select the project root.
+4. Install the **Studio Bridge** once after a fresh machine/plugin reset.
+5. Start the **DEV STACK**. Forge and Rojo run in the background.
+6. Open Roblox Studio and connect Rojo.
+7. Use the Forge MCP/agent layer for supervised AI-assisted implementation, inspection and testing.
 
-## Project validation
+## Validation
+
+The release workflow runs `npm run verify` before packaging. The verification step parses project JSON files and runs Node syntax checks over Forge `.mjs`/`.cjs` files.
 
 Forge accepts a project only when the selected folder contains:
 
@@ -50,29 +50,37 @@ Forge accepts a project only when the selected folder contains:
 - `src/`
 - `tools/roblox-forge/forge-server.mjs`
 
-This prevents accidentally selecting the wrong directory.
-
 ## Studio bridge
 
 The app can install `studio/ForgePlugin.server.lua` to:
 
 `%LOCALAPPDATA%\Roblox\Plugins\RobloxForge.lua`
 
-The plugin posts a state heartbeat to Forge every two seconds. The desktop app reports the bridge as connected when a recent heartbeat is available.
+The plugin posts Studio state to Forge every two seconds. Roblox documents localhost communication from Studio plugins as a supported extension mechanism; the user must allow HTTP communication when prompted. urlRoblox HttpService documentationhttps://create.roblox.com/docs/cloud-services/http-service
+
+## Agent layer
+
+Forge is deliberately agent-agnostic. Agent CLIs are detected at runtime from the registry; Forge does not assume a vendor, model or free quota. See `agents/README.md` and `agents/registry.json` for the supported adapters and roles.
+
+The default policy is **supervised**. Sensitive or destructive operations should require explicit approval.
 
 ## Security model
 
-Forge uses an explicit process allowlist. It does not expose an arbitrary shell-command textbox. The desktop UI can only control the known development processes and the approved Forge bridge operations.
+Forge uses explicit process/tool allowlists, a project-root sandbox for file operations, optimistic concurrency for project writes, bounded request bodies and a local-only default network binding. It does not expose an arbitrary shell textbox.
 
-Optional GitHub integration uses environment variables. Never commit a GitHub token.
+Never commit API tokens or credentials.
 
-## Web bridge
+## MCP / ChatGPT
 
-The local server can be opened at:
+MCP is the canonical integration boundary. Local agents can use stdio MCP directly. ChatGPT custom MCP apps require the supported developer-mode/app setup; ChatGPT does not directly connect to an arbitrary localhost MCP server, so a secure tunnel or supported remote deployment is required when connecting ChatGPT itself. urlOpenAI Apps SDK documentationhttps://help.openai.com/en/articles/12515353-build-with-the-apps-sdk
+
+## Local bridge
+
+The Forge server runs at:
 
 `http://127.0.0.1:43117`
 
-Available core endpoints include `/api/health`, `/api/studio/state`, and `/api/command`.
+Core endpoints include `/api/health`, `/api/studio/state`, `/api/project`, `/api/project/file/read`, `/api/project/file/write` and `/api/command`.
 
 ## Uninstall Studio plugin
 
