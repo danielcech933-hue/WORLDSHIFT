@@ -13,11 +13,9 @@ local function part(parent: Instance, name: string, size: Vector3, position: Vec
 	p.Size = size
 	p.Position = position
 	p.Anchored = true
-	p.Material = material
 	p.Transparency = transparency or 0
-	if color then
-		p.Color = color
-	end
+	p.Material = material
+	if color then p.Color = color end
 	p.Parent = parent
 	return p
 end
@@ -41,6 +39,7 @@ local function makeLabel(parent: Instance, text: string, offset: Vector3)
 	label.Parent = gui
 end
 
+-- ANIME REALITY — HOSHIKAWA
 if not buildings:FindFirstChild("HoshikawaArrival") then
 	part(buildings, "HoshikawaArrival", Vector3.new(70, 2, 70), Vector3.new(0, -1, 0), Enum.Material.Grass, 0, Color3.fromRGB(82, 130, 76))
 	part(buildings, "ArrivalStone", Vector3.new(18, 1, 18), Vector3.new(0, 1, 0), Enum.Material.Slate, 0, Color3.fromRGB(115, 115, 125))
@@ -55,13 +54,41 @@ if not spawnFolder:FindFirstChild("HoshikawaSpawn") then
 	local spawn = Instance.new("SpawnLocation")
 	spawn.Name = "HoshikawaSpawn"
 	spawn.Size = Vector3.new(8, 1, 8)
-	spawn.Position = Vector3.new(0, 3, 0)
+	spawn.Position = Vector3.new(0, 3, 8)
 	spawn.Anchored = true
 	spawn.Neutral = true
 	spawn.Transparency = 0.35
 	spawn.Parent = spawnFolder
 end
 
+-- MOVIE REALITY — METROVALE
+if not buildings:FindFirstChild("MetrovaleArrival") then
+	part(buildings, "MetrovaleArrival", Vector3.new(100, 2, 90), Vector3.new(150, -1, 0), Enum.Material.Asphalt, 0, Color3.fromRGB(42, 45, 52))
+	part(buildings, "MetrovalePlaza", Vector3.new(30, 0.8, 30), Vector3.new(150, 1, 0), Enum.Material.Concrete, 0, Color3.fromRGB(125, 128, 135))
+	part(buildings, "MetrovaleRoad", Vector3.new(14, 0.2, 90), Vector3.new(150, 2, 0), Enum.Material.Asphalt, 0, Color3.fromRGB(35, 37, 42))
+	part(buildings, "MetrovaleRoadCross", Vector3.new(100, 0.2, 14), Vector3.new(150, 2.05, 0), Enum.Material.Asphalt, 0, Color3.fromRGB(35, 37, 42))
+
+	for i = -1, 1 do
+		local building = part(buildings, "MetrovaleTower" .. tostring(i), Vector3.new(18, 28 + math.abs(i) * 10, 18), Vector3.new(120 + i * 30, 15 + math.abs(i) * 5, -24), Enum.Material.SmoothPlastic, 0, Color3.fromRGB(55, 62, 76))
+		makeLabel(building, i == 0 and "METROVALE" or "STUDIO DISTRICT", Vector3.new(0, building.Size.Y / 2 + 3, 0))
+	end
+
+	local sign = part(interactables, "MetrovaleSign", Vector3.new(14, 5, 1), Vector3.new(150, 7, -30), Enum.Material.Metal, 0, Color3.fromRGB(65, 70, 82))
+	makeLabel(sign, "METROVALE\nMovie Reality", Vector3.new(0, 4, 0))
+end
+
+if not spawnFolder:FindFirstChild("MetrovaleSpawn") then
+	local spawn = Instance.new("SpawnLocation")
+	spawn.Name = "MetrovaleSpawn"
+	spawn.Size = Vector3.new(8, 1, 8)
+	spawn.Position = Vector3.new(150, 3, 8)
+	spawn.Anchored = true
+	spawn.Neutral = true
+	spawn.Transparency = 0.35
+	spawn.Parent = spawnFolder
+end
+
+-- THE GUIDE — shared opening character
 if not npcs:FindFirstChild("Guide") then
 	local model = Instance.new("Model")
 	model.Name = "Guide"
@@ -94,12 +121,10 @@ local guide = npcs:WaitForChild("Guide")
 local basePivot = guide:GetPivot()
 local elapsed = 0
 RunService.Heartbeat:Connect(function(dt)
-	if not guide.Parent then
-		return
-	end
+	if not guide.Parent then return end
 	elapsed += dt
 	local y = math.sin(elapsed * 1.4) * 0.18
 	guide:PivotTo(basePivot * CFrame.new(0, y, 0))
 end)
 
-print("[WORLDSHIFT] Hoshikawa arrival scene ready")
+print("[WORLDSHIFT] Hoshikawa + Metrovale arrival scenes ready")
