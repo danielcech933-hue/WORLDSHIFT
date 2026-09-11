@@ -1,0 +1,13 @@
+{
+  "name": "roblox-forge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local Roblox development bridge for AI-assisted project inspection and controlled Studio automation.",
+  "type": "module",
+  "scripts": {
+    "start": "node forge-server.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
