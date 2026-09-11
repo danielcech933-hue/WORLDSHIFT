@@ -4,7 +4,7 @@ import * as z from 'zod/v4';
 
 const FORGE_URL = process.env.FORGE_URL || 'http://127.0.0.1:43117';
 const FORGE_SECRET = process.env.FORGE_SECRET || '';
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 
 async function forge(path, options = {}) {
   const headers = {
@@ -57,20 +57,17 @@ function createServer() {
   server.registerTool('read_project_file', {
     title: 'Read Project File',
     description: 'Read a UTF-8 file inside the connected WORLDSHIFT project. Paths are sandboxed to the project root.',
-    inputSchema: z.object({ path: z.string().min(1).describe('Project-relative path, e.g. src/server/Bootstrap.server.luau') }),
+    inputSchema: z.object({ path: z.string().min(1).describe('Project-relative path') }),
     annotations: { readOnlyHint: true, destructiveHint: false },
-  }, async ({ path }) => textResult(await forge('/api/project/file/read', {
-    method: 'POST',
-    body: JSON.stringify({ path }),
-  })));
+  }, async ({ path }) => textResult(await forge('/api/project/file/read', { method: 'POST', body: JSON.stringify({ path }) })));
 
   server.registerTool('write_project_file', {
     title: 'Write Project File',
-    description: 'Write a UTF-8 file inside the connected WORLDSHIFT project. This changes source code and must be used deliberately.',
+    description: 'Write a UTF-8 file inside the connected WORLDSHIFT project with optional optimistic concurrency protection.',
     inputSchema: z.object({
-      path: z.string().min(1).describe('Project-relative file path'),
-      content: z.string().describe('Complete UTF-8 file contents'),
-      expectedSha256: z.string().optional().describe('Optional SHA-256 of the current file for optimistic concurrency control'),
+      path: z.string().min(1),
+      content: z.string(),
+      expectedSha256: z.string().optional(),
     }),
     annotations: { readOnlyHint: false, destructiveHint: true },
   }, async ({ path, content, expectedSha256 }) => textResult(await forge('/api/project/file/write', {
