@@ -99,15 +99,17 @@ function findOnPath(command) {
   }
 }
 
+function isFile(candidate) {
+  try { return fsSync.existsSync(candidate) && fsSync.statSync(candidate).isFile(); } catch { return false; }
+}
+
 function findExecutableInCandidates(candidates) {
-  return candidates.find(candidate => {
-    try { return fsSync.existsSync(candidate) && fsSync.statSync(candidate).isFile(); } catch { return false; }
-  }) || null;
+  return candidates.find(isFile) || null;
 }
 
 function resolveRojoCommand() {
   const explicit = process.env.ROJO_PATH?.trim();
-  if (explicit && fsSync.existsSync(explicit)) return path.normalize(explicit);
+  if (explicit && isFile(explicit)) return path.normalize(explicit);
 
   const onPath = findOnPath('rojo');
   if (onPath) return onPath;
@@ -116,18 +118,18 @@ function resolveRojoCommand() {
   const localAppData = process.env.LOCALAPPDATA || path.join(home, 'AppData', 'Local');
   const roamingAppData = process.env.APPDATA || path.join(home, 'AppData', 'Roaming');
   const candidates = [
-    // Cargo / Rust installation.
+    path.join('C:', 'Rojo', 'rojo.exe'),
+    path.join('C:', 'Rojo', 'bin', 'rojo.exe'),
+    path.join('C:', 'Program Files', 'Rojo', 'rojo.exe'),
+    path.join('C:', 'Program Files (x86)', 'Rojo', 'rojo.exe'),
     path.join(home, '.cargo', 'bin', 'rojo.exe'),
-    // Aftman and Foreman are common Roblox toolchain managers.
     path.join(home, '.aftman', 'bin', 'rojo.exe'),
     path.join(home, '.foreman', 'bin', 'rojo.exe'),
     path.join(roamingAppData, 'Aftman', 'bin', 'rojo.exe'),
-    // Scoop / standalone installations.
     path.join(home, 'scoop', 'shims', 'rojo.exe'),
     path.join(localAppData, 'Rojo', 'rojo.exe'),
     path.join(localAppData, 'Programs', 'Rojo', 'rojo.exe'),
     path.join(localAppData, 'Programs', 'Aftman', 'bin', 'rojo.exe'),
-    // Project-local Roblox toolchain managers.
     ...(projectRoot ? [
       path.join(projectRoot, '.aftman', 'bin', 'rojo.exe'),
       path.join(projectRoot, '.foreman', 'bin', 'rojo.exe'),
@@ -158,7 +160,7 @@ function start(id) {
   if (!def) throw new Error(`Neznámý proces: ${id}`);
 
   if (id === 'rojo' && !resolveRojoCommand()) {
-    throw new Error('Rojo nebyl nalezen. Forge hledal PATH, Cargo, Aftman, Foreman, Scoop a běžné instalace. Pokud je Rojo nainstalované jinde, nastav ROJO_PATH na cestu k rojo.exe.');
+    throw new Error('Rojo nebyl nalezen. Forge hledal PATH, C:\\Rojo, Cargo, Aftman, Foreman, Scoop a běžné instalace.');
   }
 
   const child = spawn(def.command, def.args, {
