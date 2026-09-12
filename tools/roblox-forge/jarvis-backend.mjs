@@ -2,6 +2,7 @@ import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
+import { inspectPc } from './pc-inventory.mjs';
 
 const PROJECT_ROOT = process.env.FORGE_PROJECT_ROOT || process.cwd();
 const PORT = Number(process.env.JARVIS_PORT || 43119);
@@ -31,6 +32,7 @@ async function ollama(messages, options={}) {
 async function webSearch(query) {
   const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
   const r = await fetch(url, { headers:{ 'User-Agent':'ROBLOX-FORGE-JARVIS/1.0' } });
+  if (!r.ok) throw new Error(`Web search HTTP ${r.status}`);
   const html = await r.text();
   const results=[];
   const re=/<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
@@ -42,21 +44,27 @@ async function tool(name, args={}) {
   if(name==='forge_health') return forge('/api/health');
   if(name==='studio_state') return forge('/api/studio/state');
   if(name==='diagnostics') return forge('/api/diagnostics');
+  if(name==='pc_profile') return inspectPc();
   if(name==='project_file') { const file=safePath(args.path); return { path:args.path, content:await fs.readFile(file,'utf8') }; }
   if(name==='write_file') {
     if(POLICY!=='autonomous' && args.approved!==true) return { needsApproval:true, path:args.path, message:'Writing files requires approval in supervised mode.' };
     const file=safePath(args.path); await fs.mkdir(path.dirname(file),{recursive:true}); await fs.writeFile(file,String(args.content||''),'utf8'); return { ok:true, path:args.path }; }
   if(name==='search_web') return webSearch(String(args.query||''));
-  if(name==='git_status') return new Promise((resolve,reject)=>spawn('git',['status','--short'],{cwd:PROJECT_ROOT,windowsHide:true,shell:false},).stdout.on('data',d=>resolve({output:String(d)})));
+  if(name==='git_status') return new Promise((resolve,reject)=>{
+    const child=spawn('git',['status','--short'],{cwd:PROJECT_ROOT,windowsHide:true,shell:false}); let output='';
+    child.stdout.on('data',d=>output+=String(d)); child.stderr.on('data',d=>output+=String(d));
+    child.on('error',reject); child.on('close',code=>resolve({ok:code===0,output}));
+  });
   if(name==='agent_run') return getJson('http://127.0.0.1:43118/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({role:args.role||'coder',agentId:args.agentId||'codex',prompt:String(args.prompt||''),policy:'supervised'})});
   throw new Error(`Unknown tool: ${name}`);
 }
 
-const SYSTEM = `You are JARVIS, the local AI development assistant for the WORLDSHIFT Roblox project. Speak Czech unless the user speaks another language. Be concise but useful. You have tools exposed by the local Forge backend. Never claim an action succeeded unless the tool result confirms it. Prefer inspecting the project and Studio before making assumptions. In supervised mode, file writes require explicit approval. You are allowed to search the public web when current information is needed. Your goal is to autonomously develop, test and improve WORLDSHIFT while keeping the human as creative director.`;
+const SYSTEM = `You are JARVIS, the local AI development assistant for the WORLDSHIFT Roblox project. Speak Czech unless the user speaks another language. Be concise but useful. You have tools exposed by the local Forge backend. Never claim an action succeeded unless the tool result confirms it. Prefer inspecting the project, PC and Studio before making assumptions. In supervised mode, file writes require explicit approval. You are allowed to search the public web when current information is needed. You can inspect the Windows PC with pc_profile, but do not access personal files unless the user explicitly asks. Your goal is to autonomously develop, test and improve WORLDSHIFT while keeping the human as creative director.`;
 const TOOL_SCHEMA = [
   {type:'function',function:{name:'forge_health',description:'Get Forge bridge health.',parameters:{type:'object',properties:{},additionalProperties:false}}},
   {type:'function',function:{name:'studio_state',description:'Inspect current Roblox Studio state, heartbeat, selection and workspace snapshot.',parameters:{type:'object',properties:{},additionalProperties:false}}},
   {type:'function',function:{name:'diagnostics',description:'Get Forge diagnostics for Node, Rojo, Git, Studio and agents.',parameters:{type:'object',properties:{},additionalProperties:false}}},
+  {type:'function',function:{name:'pc_profile',description:'Inspect safe Windows hardware, OS, BIOS, GPU, disks and top resource-consuming processes. Do not read personal files.',parameters:{type:'object',properties:{},additionalProperties:false}}},
   {type:'function',function:{name:'project_file',description:'Read a UTF-8 project file. Use relative paths only.',parameters:{type:'object',properties:{path:{type:'string'}},required:['path'],additionalProperties:false}}},
   {type:'function',function:{name:'write_file',description:'Write a UTF-8 project file. In supervised mode this returns a pending approval unless approved=true.',parameters:{type:'object',properties:{path:{type:'string'},content:{type:'string'},approved:{type:'boolean'}},required:['path','content'],additionalProperties:false}}},
   {type:'function',function:{name:'search_web',description:'Search the public web for current information.',parameters:{type:'object',properties:{query:{type:'string'}},required:['query'],additionalProperties:false}}},
@@ -107,11 +115,11 @@ fetch('/state').then(r=>r.json()).then(s=>{model.textContent=s.model||'';auto.te
 
 async function handle(req,res){const u=new URL(req.url,`http://${HOST}:${PORT}`);try{
   if(req.method==='GET'&&u.pathname==='/'){return text(res,200,html,'text/html; charset=utf-8')}
-  if(req.method==='GET'&&u.pathname==='/health')return json(res,200,{ok:true,service:'JARVIS',model:MODEL,ollama:OLLAMA_URL,policy:POLICY,projectRoot,autonomy:state.autonomy,busy:state.busy});
+  if(req.method==='GET'&&u.pathname==='/health')return json(res,200,{ok:true,service:'JARVIS',model:MODEL,ollama:OLLAMA_URL,policy:POLICY,projectRoot:PROJECT_ROOT,autonomy:state.autonomy,busy:state.busy});
   if(req.method==='GET'&&u.pathname==='/state')return json(res,200,{...state,model:MODEL,policy:POLICY});
+  if(req.method==='GET'&&u.pathname==='/pc')return json(res,200,await inspectPc());
   if(req.method==='POST'&&u.pathname==='/chat'){const b=await body(req);if(!b.message)return json(res,400,{error:'message required'});return json(res,200,await chat(String(b.message),Boolean(b.approve)))}
   if(req.method==='POST'&&u.pathname==='/autonomy'){const b=await body(req);state.autonomy=Boolean(b.enabled);if(state.autonomy&&!autonomyTimer){autonomyTimer=setInterval(()=>void autonomyTick(),Number(process.env.JARVIS_AUTONOMY_INTERVAL_MS||30000));void autonomyTick();}if(!state.autonomy&&autonomyTimer){clearInterval(autonomyTimer);autonomyTimer=null;}await saveState();return json(res,200,{ok:true,autonomy:state.autonomy})}
-  if(req.method==='POST'&&u.pathname==='/speak')return json(res,200,{ok:true});
   return json(res,404,{error:'not found'});
 }catch(e){return json(res,500,{error:e.message})}}
 
