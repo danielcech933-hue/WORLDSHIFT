@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { assessProcess, consumeStopAssessment } from './pc-intelligence.mjs';
 
 const ROOT = process.env.FORGE_PROJECT_ROOT || process.cwd();
 const APPROVAL = process.env.JARVIS_POLICY || 'supervised';
@@ -61,10 +62,13 @@ export async function systemTool(name, args = {}) {
   if (name === 'process_action') {
     const action = String(args.action || 'list');
     if (action === 'list') return run('tasklist', ['/FO', 'CSV', '/NH']);
+    if (action === 'assess') return assessProcess(String(args.process || ''), String(args.context || 'balanced'));
     if (action === 'stop') {
       if (needsApproval(args)) return { needsApproval: true, message: 'Stopping a process requires approval.', process: args.process };
       const processName = String(args.process || '').trim();
       if (!/^[A-Za-z0-9_.-]+\.exe$/i.test(processName)) return { ok: false, error: 'Use an exact .exe process name.' };
+      const assessment = consumeStopAssessment(args.assessmentId, processName);
+      if (!assessment.ok) return assessment;
       return run('taskkill', ['/IM', processName, '/T', '/F']);
     }
     return { ok: false, error: `Unsupported process action: ${action}` };
