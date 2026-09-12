@@ -1,4 +1,3 @@
-import fs from 'node:fs/promises';
 import path from 'node:path';
 
 const FORGE_URL = process.env.FORGE_TELEMETRY_FORGE_URL || 'http://127.0.0.1:43117';
@@ -11,94 +10,57 @@ const INTERVAL_MS = Number(process.env.FORGE_TELEMETRY_INTERVAL_MS || 5000);
 const EVENT_BATCH_LIMIT = 25;
 const queue = [];
 let flushing = false;
+let started = false;
 
-function configured() {
-  return Boolean(SUPABASE_URL && SUPABASE_KEY);
-}
-
+function configured() { return Boolean(SUPABASE_URL && SUPABASE_KEY); }
 function sanitize(value) {
-  if (value === undefined) return null;
-  if (value === null) return null;
+  if (value === undefined || value === null) return value === null ? null : null;
   if (typeof value === 'string') return value.slice(0, 10000);
   return value;
 }
-
 async function getJson(url) {
   const response = await fetch(url, { headers: { Accept: 'application/json' } });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   return response.json();
 }
-
 export function telemetryStatus() {
-  return {
-    configured: configured(),
-    project: PROJECT_NAME,
-    endpoint: SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/forge_events` : null,
-    queued: queue.length,
-  };
+  return { configured: configured(), project: PROJECT_NAME, endpoint: SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/forge_events` : null, queued: queue.length };
 }
-
 export function track(eventType, payload = {}, severity = 'info', source = 'forge') {
-  queue.push({
-    project_name: PROJECT_NAME,
-    project_root: PROJECT_ROOT,
-    source: String(source).slice(0, 80),
-    event_type: String(eventType).slice(0, 120),
-    severity,
-    payload: sanitize(payload) || {},
-  });
+  queue.push({ project_name: PROJECT_NAME, project_root: PROJECT_ROOT, source: String(source).slice(0, 80), event_type: String(eventType).slice(0, 120), severity, payload: sanitize(payload) || {} });
   while (queue.length > 500) queue.shift();
   void flush();
 }
-
 async function flush() {
   if (flushing || !configured() || !queue.length) return;
   flushing = true;
   const batch = queue.splice(0, EVENT_BATCH_LIMIT);
   try {
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/forge_events`, {
-      method: 'POST',
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-        'Content-Type': 'application/json',
-        Prefer: 'return=minimal',
-      },
-      body: JSON.stringify(batch),
-    });
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/forge_events`, { method: 'POST', headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' }, body: JSON.stringify(batch) });
     if (!response.ok) throw new Error(`Supabase HTTP ${response.status}: ${await response.text()}`);
   } catch (error) {
     queue.unshift(...batch);
     while (queue.length > 500) queue.pop();
     if (process.env.FORGE_TELEMETRY_DEBUG === '1') console.error(`[FORGE TELEMETRY] ${error.message}`);
-  } finally {
-    flushing = false;
-  }
+  } finally { flushing = false; }
 }
-
 async function snapshot() {
-  const [forge, studio, agents] = await Promise.allSettled([
-    getJson(`${FORGE_URL}/api/health`),
-    getJson(`${FORGE_URL}/api/studio/state`),
-    getJson(`${AGENT_URL}/health`),
-  ]);
+  const [forge, studio, agents] = await Promise.allSettled([getJson(`${FORGE_URL}/api/health`), getJson(`${FORGE_URL}/api/studio/state`), getJson(`${AGENT_URL}/health`)]);
   track('runtime_snapshot', {
     forge: forge.status === 'fulfilled' ? forge.value : { error: String(forge.reason?.message || forge.reason) },
     studio: studio.status === 'fulfilled' ? studio.value : { error: String(studio.reason?.message || studio.reason) },
     agents: agents.status === 'fulfilled' ? agents.value : { error: String(agents.reason?.message || agents.reason) },
   }, 'info', 'telemetry');
 }
-
-async function run() {
+export async function startTelemetry() {
+  if (started) return telemetryStatus();
+  started = true;
   track('telemetry_started', { intervalMs: INTERVAL_MS }, 'info', 'telemetry');
-  if (!configured()) {
-    console.log('[ROBLOX FORGE] Telemetry is disabled until SUPABASE_URL and SUPABASE_ANON_KEY are configured.');
-  } else {
-    console.log(`[ROBLOX FORGE] Supabase telemetry enabled for ${PROJECT_NAME}.`);
-  }
+  console.log(configured() ? `[ROBLOX FORGE] Supabase telemetry enabled for ${PROJECT_NAME}.` : '[ROBLOX FORGE] Telemetry disabled until SUPABASE_URL and SUPABASE_ANON_KEY are configured.');
   await snapshot().catch(() => {});
   setInterval(() => { void snapshot().catch(() => {}); }, INTERVAL_MS);
   setInterval(() => { void flush(); }, 1000);
+  return telemetryStatus();
 }
 
-if (import.meta.url === `file://${process.argv[1]?.replaceAll('\\', '/')}`) run();
+if (import.meta.url === `file://${process.argv[1]?.replaceAll('\\', '/')}`) startTelemetry();
