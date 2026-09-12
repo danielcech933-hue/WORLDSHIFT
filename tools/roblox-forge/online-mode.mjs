@@ -44,6 +44,7 @@ async function startService(id, name, spawnFn, port) {
 async function reconcile() {
   await startService('forge', 'Forge', () => command('node', [path.join(ROOT, 'tools', 'roblox-forge', 'forge-server.mjs')]), 43117);
   await startService('agents', 'AI Orchestrator', () => command('node', [path.join(ROOT, 'tools', 'roblox-forge', 'agents', 'orchestrator-v2.mjs')]), 43118);
+  await startService('jarvis', 'JARVIS', () => command('node', [path.join(ROOT, 'tools', 'roblox-forge', 'jarvis-backend.mjs')]), 43119);
   await startService('rojo', 'Rojo', () => command(process.platform === 'win32' ? 'rojo.exe' : 'rojo', ['serve', 'default.project.json']), 34872);
   const processes = [...services.values()].map(({ child, ...item }) => item);
   await state({ mode: 'online', projectRoot: ROOT, intervalMs: INTERVAL_MS, processes, idle: true, status: 'READY_FOR_INSTRUCTION', lastCheck: stamp() });
