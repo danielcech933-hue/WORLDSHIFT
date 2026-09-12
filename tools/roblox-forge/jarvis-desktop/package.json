@@ -1,8 +1,8 @@
 {
   "name": "jarvis-desktop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Standalone JARVIS desktop assistant for ROBLOX FORGE and WORLDSHIFT.",
+  "description": "JARVIS Beta desktop voice assistant for ROBLOX FORGE and WORLDSHIFT.",
   "type": "module",
   "main": "main.mjs",
   "scripts": {
@@ -17,7 +17,7 @@
     "appId": "com.robloxforge.jarvis",
     "productName": "JARVIS",
     "directories": { "output": "dist" },
-    "files": ["main.mjs", "preload.cjs"],
+    "files": ["main.mjs", "preload.cjs", "index.html"],
     "asar": true,
     "compression": "maximum",
     "win": {
