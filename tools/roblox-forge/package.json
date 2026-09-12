@@ -1,6 +1,6 @@
 {
   "name": "roblox-forge",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "private": true,
   "description": "ROBLOX FORGE desktop development platform, local bridge, MCP gateway, multi-agent orchestrator and extensible plugin host.",
   "type": "module",
@@ -11,6 +11,7 @@
     "mcp": "node mcp-server.mjs",
     "agents": "node agents/orchestrator.mjs",
     "jarvis": "node jarvis-backend.mjs",
+    "pc:scan": "node pc-inventory.mjs",
     "verify": "node smoke-test.mjs",
     "desktop:dev": "electron .",
     "build:win": "electron-builder --win nsis portable"
@@ -30,7 +31,7 @@
     "appId": "com.robloxforge.desktop",
     "productName": "ROBLOX FORGE",
     "directories": { "output": "dist" },
-    "files": ["desktop/**/*", "forge-server.mjs", "jarvis-backend.mjs", "mcp-server.mjs", "agents/**/*", "plugins/**/*", "public/**/*", "smoke-test.mjs", "package.json", ".opencode/**/*", ".gemini/**/*"],
+    "files": ["desktop/**/*", "forge-server.mjs", "jarvis-backend.mjs", "pc-inventory.mjs", "mcp-server.mjs", "agents/**/*", "plugins/**/*", "public/**/*", "smoke-test.mjs", "package.json", ".opencode/**/*", ".gemini/**/*"],
     "asar": true,
     "compression": "maximum",
     "win": {
