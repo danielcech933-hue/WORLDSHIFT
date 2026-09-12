@@ -1,5 +1,9 @@
 import path from 'node:path';
 
+try {
+  process.loadEnvFile?.(path.join(process.env.FORGE_PROJECT_ROOT || process.cwd(), 'tools', 'roblox-forge', '.env'));
+} catch {}
+
 const FORGE_URL = process.env.FORGE_TELEMETRY_FORGE_URL || 'http://127.0.0.1:43117';
 const AGENT_URL = process.env.FORGE_TELEMETRY_AGENT_URL || 'http://127.0.0.1:43118';
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
