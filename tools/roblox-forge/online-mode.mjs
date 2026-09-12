@@ -45,9 +45,10 @@ async function reconcile() {
   await startService('forge', 'Forge', () => command('node', [path.join(ROOT, 'tools', 'roblox-forge', 'forge-server.mjs')]), 43117);
   await startService('agents', 'AI Orchestrator', () => command('node', [path.join(ROOT, 'tools', 'roblox-forge', 'agents', 'orchestrator-v2.mjs')]), 43118);
   await startService('jarvis', 'JARVIS', () => command('node', [path.join(ROOT, 'tools', 'roblox-forge', 'jarvis-backend.mjs')]), 43119);
+  await startService('worker', 'JARVIS Autonomous Worker', () => command('node', [path.join(ROOT, 'tools', 'roblox-forge', 'jarvis-autonomous-worker.mjs')]), 43120);
   await startService('rojo', 'Rojo', () => command(process.platform === 'win32' ? 'rojo.exe' : 'rojo', ['serve', 'default.project.json']), 34872);
   const processes = [...services.values()].map(({ child, ...item }) => item);
-  await state({ mode: 'online', projectRoot: ROOT, intervalMs: INTERVAL_MS, processes, idle: true, status: 'READY_FOR_INSTRUCTION', lastCheck: stamp() });
+  await state({ mode: 'online', projectRoot: ROOT, intervalMs: INTERVAL_MS, processes, idle: false, status: 'AUTONOMOUS_WORKER_ONLINE', lastCheck: stamp() });
 }
 console.log(`[ROBLOX FORGE] ONLINE MODE active for ${ROOT}`);
 console.log('[ROBLOX FORGE] Services will be kept alive and restarted if they stop.');
