@@ -1,6 +1,6 @@
 {
   "name": "roblox-forge",
-  "version": "1.2.7",
+  "version": "1.2.8",
   "private": true,
   "description": "ROBLOX FORGE desktop development platform, local bridge, MCP gateway, multi-agent orchestrator and extensible plugin host.",
   "type": "module",
