@@ -1,0 +1,36 @@
+{
+  "name": "jarvis-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Standalone JARVIS desktop assistant for ROBLOX FORGE and WORLDSHIFT.",
+  "type": "module",
+  "main": "main.mjs",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win nsis portable"
+  },
+  "devDependencies": {
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.robloxforge.jarvis",
+    "productName": "JARVIS",
+    "directories": { "output": "dist" },
+    "files": ["main.mjs", "preload.cjs"],
+    "asar": true,
+    "compression": "maximum",
+    "win": {
+      "target": ["nsis", "portable"],
+      "artifactName": "JARVIS-${version}-${arch}.${ext}",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true
+    }
+  }
+}
