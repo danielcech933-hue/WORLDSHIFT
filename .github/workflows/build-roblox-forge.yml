@@ -40,3 +40,32 @@ jobs:
             tools/roblox-forge/dist/*.exe
             tools/roblox-forge/dist/*.blockmap
           if-no-files-found: error
+
+  jarvis:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: tools/roblox-forge/jarvis-desktop
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install JARVIS desktop dependencies
+        run: npm install
+
+      - name: Build standalone JARVIS Windows app
+        run: npm run build:win
+
+      - name: Upload JARVIS release
+        uses: actions/upload-artifact@v4
+        with:
+          name: JARVIS-Windows
+          path: |
+            tools/roblox-forge/jarvis-desktop/dist/*.exe
+            tools/roblox-forge/jarvis-desktop/dist/*.blockmap
+          if-no-files-found: error
