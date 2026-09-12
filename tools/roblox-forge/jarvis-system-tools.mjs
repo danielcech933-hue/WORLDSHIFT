@@ -2,6 +2,8 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { assessProcess, consumeStopAssessment } from './pc-intelligence.mjs';
+import { listWindows, focusWindow, sendKeys, typeText, captureScreen, clipboardGet, clipboardSet, desktopState } from './jarvis-desktop-control.mjs';
+import { consultChatGPT, chatGPTStatus } from './chatgpt-desktop-bridge.mjs';
 
 const ROOT = process.env.FORGE_PROJECT_ROOT || process.cwd();
 const APPROVAL = process.env.JARVIS_POLICY || 'supervised';
@@ -51,6 +53,28 @@ export async function systemTool(name, args = {}) {
     return run('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', command]);
   }
 
+  if (name === 'desktop_control') {
+    const action = String(args.action || 'state');
+    if (['type', 'keys'].includes(action) && needsApproval(args)) return { needsApproval: true, message: 'Desktop input requires approval in supervised mode.' };
+    if (action === 'state') return desktopState();
+    if (action === 'windows') return listWindows();
+    if (action === 'focus') return focusWindow(String(args.target || ''));
+    if (action === 'keys') return sendKeys(String(args.keys || ''));
+    if (action === 'type') return typeText(String(args.text || ''));
+    if (action === 'screenshot') return captureScreen(String(args.file || 'jarvis-screen.png'));
+    if (action === 'clipboard_get') return clipboardGet();
+    if (action === 'clipboard_set') return clipboardSet(String(args.text || ''));
+    return { ok: false, error: `Unsupported desktop action: ${action}` };
+  }
+
+  if (name === 'chatgpt_desktop') {
+    const action = String(args.action || 'status');
+    if (['consult'].includes(action) && needsApproval(args)) return { needsApproval: true, message: 'Sending a message to the ChatGPT desktop app requires approval in supervised mode.' };
+    if (action === 'status') return chatGPTStatus();
+    if (action === 'consult') return consultChatGPT(String(args.prompt || ''), { waitMs: args.waitMs, window: args.window, screenshot: args.screenshot });
+    return { ok: false, error: `Unsupported ChatGPT action: ${action}` };
+  }
+
   if (name === 'git_action') {
     const action = String(args.action || 'status');
     const allowed = new Set(['status', 'pull', 'fetch', 'log', 'diff', 'branch']);
@@ -89,7 +113,7 @@ export async function systemTool(name, args = {}) {
       child.unref();
       return { ok: true, executable: exe, pid: child.pid || null };
     }
-    return { ok: false, error: `Unsupported Roblox Studio action: ${action}` };
+    return { ok: false, error: `Unsupported Studio action: ${action}` };
   }
 
   if (name === 'launch_app') {
