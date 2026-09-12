@@ -1,6 +1,6 @@
 {
   "name": "roblox-forge",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "private": true,
   "description": "ROBLOX FORGE desktop development platform, local bridge, MCP gateway, multi-agent orchestrator and extensible plugin host.",
   "type": "module",
@@ -18,35 +18,17 @@
     "desktop:dev": "electron .",
     "build:win": "electron-builder --win nsis portable"
   },
-  "engines": {
-    "node": ">=20"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/server": "^2.0.0",
-    "zod": "^4.0.0"
-  },
-  "devDependencies": {
-    "electron": "^38.0.0",
-    "electron-builder": "^26.0.12"
-  },
+  "engines": { "node": ">=20" },
+  "dependencies": { "@modelcontextprotocol/server": "^2.0.0", "zod": "^4.0.0" },
+  "devDependencies": { "electron": "^38.0.0", "electron-builder": "^26.0.12" },
   "build": {
     "appId": "com.robloxforge.desktop",
     "productName": "ROBLOX FORGE",
     "directories": { "output": "dist" },
-    "files": ["desktop/**/*", "forge-server.mjs", "jarvis-backend.mjs", "jarvis-system-tools.mjs", "model-router.mjs", "task-queue.mjs", "interrupt-controller.mjs", "benchmark-ollama.mjs", "pc-inventory.mjs", "pc-optimizer.mjs", "mcp-server.mjs", "agents/**/*", "plugins/**/*", "public/**/*", "smoke-test.mjs", "package.json", ".opencode/**/*", ".gemini/**/*"],
+    "files": ["desktop/**/*", "forge-server.mjs", "jarvis-backend.mjs", "jarvis-system-tools.mjs", "jarvis-context.mjs", "jarvis-task-manager.mjs", "pc-intelligence.mjs", "model-router.mjs", "task-queue.mjs", "interrupt-controller.mjs", "benchmark-ollama.mjs", "pc-inventory.mjs", "pc-optimizer.mjs", "mcp-server.mjs", "agents/**/*", "plugins/**/*", "public/**/*", "smoke-test.mjs", "package.json", ".opencode/**/*", ".gemini/**/*"],
     "asar": true,
     "compression": "maximum",
-    "win": {
-      "target": ["nsis", "portable"],
-      "artifactName": "ROBLOX-FORGE-${version}-${arch}.${ext}",
-      "requestedExecutionLevel": "asInvoker"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "runAfterFinish": true
-    }
+    "win": { "target": ["nsis", "portable"], "artifactName": "ROBLOX-FORGE-${version}-${arch}.${ext}", "requestedExecutionLevel": "asInvoker" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "createStartMenuShortcut": true, "runAfterFinish": true }
   }
 }
