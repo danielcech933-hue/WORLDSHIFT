@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>JARVIS</title>
+  <style>
+    :root{--bg:#06080d;--panel:#0b1018;--panel2:#0f1722;--line:#1c2a3b;--text:#eef4ff;--muted:#8ea0b7;--accent:#5ee7ff;--ok:#48e38a;--warn:#ffc857}
+    *{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 50% -20%,#10223b 0,#06080d 48%);color:var(--text);font:14px Inter,Segoe UI,system-ui,sans-serif;height:100vh;overflow:hidden}
+    .app{height:100vh;display:grid;grid-template-rows:64px 1fr 82px}.top{display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-bottom:1px solid var(--line);background:rgba(5,8,13,.88);backdrop-filter:blur(16px)}
+    .brand{display:flex;gap:12px;align-items:center}.orb{width:32px;height:32px;border-radius:50%;border:1px solid #5ee7ff88;box-shadow:0 0 28px #5ee7ff55,inset 0 0 14px #5ee7ff22;position:relative}.orb:after{content:"";position:absolute;inset:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 14px var(--accent)}
+    .name{font-weight:800;letter-spacing:.18em;font-size:18px}.sub{font-size:11px;color:var(--muted);letter-spacing:.08em}.status{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px}.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 10px var(--ok)}
+    .body{min-height:0;display:grid;grid-template-columns:250px 1fr 250px}.side{padding:18px;border-right:1px solid var(--line);background:rgba(8,12,19,.72)}.right{border-left:1px solid var(--line);border-right:0}.card{border:1px solid var(--line);background:rgba(11,16,24,.82);border-radius:14px;padding:14px;margin-bottom:12px}.label{font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:7px}.value{font-weight:650;word-break:break-word}.pill{display:inline-flex;padding:5px 8px;border-radius:8px;background:#111c2a;color:#b9d0e8;font-size:11px;margin:3px 3px 0 0}
+    .chat{min-width:0;display:flex;flex-direction:column}.messages{flex:1;overflow:auto;padding:28px 8%;scroll-behavior:smooth}.msg{max-width:78%;padding:13px 16px;border-radius:16px;margin:10px 0;white-space:pre-wrap;line-height:1.5}.user{margin-left:auto;background:#162941;border:1px solid #24415f}.assistant{background:#0c141e;border:1px solid var(--line)}.thinking{color:var(--muted);font-style:italic}
+    .bottom{display:flex;gap:10px;padding:12px 22px;border-top:1px solid var(--line);background:rgba(5,8,13,.94)}textarea{flex:1;resize:none;background:#0a1018;color:var(--text);border:1px solid var(--line);border-radius:14px;padding:12px 14px;outline:none}textarea:focus{border-color:#3c6d91}.btn{border:1px solid var(--line);background:#101a27;color:var(--text);border-radius:13px;padding:0 16px;font-weight:700;cursor:pointer}.send{background:var(--accent);color:#041017;border-color:transparent}.btn:hover{filter:brightness(1.12)}.small{font-size:12px;color:var(--muted);line-height:1.5}.error{color:#ff7f8c}.ok{color:var(--ok)}
+    @media(max-width:900px){.body{grid-template-columns:1fr}.side,.right{display:none}.messages{padding:20px}.msg{max-width:90%}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="top"><div class="brand"><div class="orb"></div><div><div class="name">JARVIS</div><div class="sub">PERSONAL AI • LOCAL CONTROL • DEVELOPMENT</div></div></div><div class="status"><span class="dot" id="dot"></span><span id="status">CONNECTING</span></div></header>
+  <section class="body">
+    <aside class="side">
+      <div class="card"><div class="label">Project</div><div class="value" id="project">Detecting…</div></div>
+      <div class="card"><div class="label">Runtime</div><div id="runtime"><span class="pill">Backend …</span><span class="pill">Worker …</span></div></div>
+      <div class="card"><div class="label">Capabilities</div><span class="pill">Windows</span><span class="pill">Roblox</span><span class="pill">Forge</span><span class="pill">Git</span><span class="pill">Web</span><span class="pill">ChatGPT</span></div>
+    </aside>
+    <main class="chat"><div class="messages" id="messages"><div class="msg assistant">Jsem JARVIS. Připojuji pracovní prostředí…</div></div></main>
+    <aside class="side right">
+      <div class="card"><div class="label">Activity</div><div class="value" id="activity">balanced</div></div>
+      <div class="card"><div class="label">Task</div><div class="value" id="task">Idle</div></div>
+      <div class="card"><div class="label">Quick test</div><button class="btn" id="check">Zkontrolovat systém</button><div class="small" style="margin-top:9px">JARVIS nejdřív ověří skutečný stav služeb.</div></div>
+    </aside>
+  </section>
+  <footer class="bottom"><textarea id="input" placeholder="Řekni JARVISovi, co má udělat… (Enter = odeslat, Shift+Enter = nový řádek)"></textarea><button class="btn send" id="send">Odeslat</button></footer>
+</div>
+<script>
+const $=id=>document.getElementById(id);let busy=false;
+function add(text,who='assistant'){const el=document.createElement('div');el.className='msg '+who;el.textContent=text;$('messages').appendChild(el);$('messages').scrollTop=$('messages').scrollHeight;return el}
+async function req(path,body){return window.jarvisDesktop.request(path,body)}
+async function refresh(){try{const [p,r,s]=await Promise.all([window.jarvisDesktop.project(),window.jarvisDesktop.runtime(),req('/state')]);$('project').textContent=p.projectRoot||'Nenalezen';$('runtime').innerHTML='<span class="pill">Backend '+(r.backend?'ONLINE':'OFFLINE')+'</span><span class="pill">Worker '+(r.worker?'ONLINE':'OFFLINE')+'</span>';$('status').textContent=r.backend?'ONLINE':'OFFLINE';$('dot').style.background=r.backend?'var(--ok)':'var(--warn)';$('activity').textContent=s.context?.label||s.context?.context||'balanced';$('task').textContent=s.activeTask||'Idle'}catch(e){$('status').textContent='OFFLINE';$('dot').style.background='var(--warn')}}
+async function send(){if(busy)return;const text=$('input').value.trim();if(!text)return;busy=true;$('input').value='';add(text,'user');const wait=add('JARVIS pracuje…','assistant thinking');try{const r=await req('/chat',{message:text,approve:false});wait.remove();add(r.reply||'Nemám odpověď.','assistant');}catch(e){wait.remove();add('Chyba: '+e.message,'assistant')}finally{busy=false;refresh()}}
+$('send').onclick=send;$('input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});$('check').onclick=()=>{$('input').value='Zkontroluj svůj systém, WORLDSHIFT, Forge, Roblox Studio a dostupné nástroje a řekni mi přesně, co je nyní funkční.';send()};refresh();setInterval(refresh,3000);
+</script>
+</body></html>
